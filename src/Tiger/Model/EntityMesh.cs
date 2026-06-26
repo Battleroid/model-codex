@@ -146,7 +146,11 @@ public static class EntityMesh
                 var tris = ib.ReadTriangles(indexOffset, indexCount, prim);
                 if (tris.Count == 0) continue;
 
-                var part = new ModelPart { MaterialIndex = pi, MaterialHash = matHash, DetailLevel = lod };
+                // The variant index groups the same geometry's permutations (gear/skin colours); only one
+                // variant is drawn at a time. Parts with a direct material (or no external table) are not
+                // permutations — keep them at -1 so they always draw.
+                int variant = (!directValid && externalMats.Count > 0) ? vsi : -1;
+                var part = new ModelPart { MaterialIndex = pi, MaterialHash = matHash, DetailLevel = lod, Variant = variant };
                 var local = new Dictionary<uint, int>();
                 int Local(uint gv)
                 {

@@ -45,10 +45,12 @@ public static class ThumbnailService
             {
                 try
                 {
-                    var g = ModelParse.Parse(mgr, tile.Entry);
-                    bool empty = g == null || g.VertexCount == 0;
+                    var parsed = ModelParse.Parse(mgr, tile.Entry);
+                    bool empty = parsed == null || parsed.VertexCount == 0;
                     EmptyCache[tile.TagHash] = empty;
                     if (empty) return (null, null, null);
+                    // Show only the default permutation; otherwise stacked variants z-fight and grey out.
+                    var g = parsed.WithVariant(parsed.DefaultVariant);
                     var textures = ResolvePartTextures(mgr, g);
                     var src = ToBitmap(IsoThumbnail.Render(g, ThumbSize, Bg, Face,
                         IsoThumbnail.DefaultAzimuth, IsoThumbnail.DefaultElevation, textures));

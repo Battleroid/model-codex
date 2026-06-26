@@ -13,17 +13,24 @@ public sealed record PreviewData(
     ModelGeometry? Geometry,
     List<PartRender> Parts,
     List<MaterialChannel> Channels,
-    string Info);
+    string Info,
+    IReadOnlyList<int> Variants,
+    int SelectedVariant);
 
 /// <summary>Shared model preview pipeline: parse geometry, build per-part textured meshes + channels.</summary>
 public static class ModelPreview
 {
     public static PreviewData Load(PackageManager mgr, ModelEntry entry, bool textured, uint? overrideAlbedo = null,
-        ModelDetail detail = ModelDetail.MostDetailed)
+        ModelDetail detail = ModelDetail.MostDetailed, int? variant = null)
     {
-        var g = ModelParse.Parse(mgr, entry, detail);
-        if (g == null || g.VertexCount == 0)
-            return new PreviewData(null, new(), new(), "no geometry");
+        var full = ModelParse.Parse(mgr, entry, detail);
+        if (full == null || full.VertexCount == 0)
+            return new PreviewData(null, new(), new(), "no geometry", Array.Empty<int>(), -1);
+
+        // Render only the selected permutation/variant — entities stack every variant on the same
+        // geometry, so drawing them all z-fights and the model looks gray/wrong.
+        int sel = variant ?? full.DefaultVariant;
+        var g = full.WithVariant(sel);
 
         var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo);
 
@@ -40,7 +47,7 @@ public static class ModelPreview
         var (mn, mx) = g.Bounds();
         var sz = mx - mn;
         string info = $"{g.Parts.Count} parts · {g.VertexCount:N0} verts · {g.TriangleCount:N0} tris · {sz.X:F1}×{sz.Y:F1}×{sz.Z:F1}";
-        return new PreviewData(g, parts, channels, info);
+        return new PreviewData(g, parts, channels, info, full.Variants, sel);
     }
 
     public static HxMaterial MakeMaterial(byte[]? albedoDds)

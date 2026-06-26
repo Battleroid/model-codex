@@ -58,7 +58,8 @@ public static class ModelExporter
     {
         var pngCache = new Dictionary<uint, byte[]?>();
         var list = new List<PartData>();
-        foreach (var part in geom.Parts)
+        // Export a single permutation (the default) so variant geometry doesn't overlap in the output.
+        foreach (var part in geom.PartsForVariant(geom.DefaultVariant))
         {
             var pd = new PartData { Pos = part.Positions, Nrm = SmoothNormals(part.Positions, part.Indices), Uv = part.Texcoords, Idx = part.Indices };
             if (textures && part.MaterialHash != 0 && MaterialMap.Albedo(mgr, part.MaterialHash) is uint th)
