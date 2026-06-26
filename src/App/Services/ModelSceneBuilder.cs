@@ -230,7 +230,10 @@ public static class ModelSceneBuilder
     {
         foreach (var p in part.Positions) pos.Add(new Vector3(p.X, p.Y, p.Z));
         foreach (var n in part.Normals) nrm.Add(new Vector3(n.X, n.Y, n.Z));
-        foreach (var t in part.Texcoords) uv.Add(new Vector2(t.X, t.Y));
+        // The parser's texcoords use the export/glTF V convention (matches MIDA's 1-V flip). HelixToolkit's
+        // texture sampler has the opposite V origin, so flip V back here for the preview meshes only — this
+        // was the "textures look cut off / mirrored" bug. Export paths keep the parser's UVs unchanged.
+        foreach (var t in part.Texcoords) uv.Add(new Vector2(t.X, 1f - t.Y));
         foreach (var i in part.Indices) idx.Add(baseV + i);
         baseV += part.Positions.Count;
     }
