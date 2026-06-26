@@ -36,7 +36,8 @@ public static class ModelExporter
         public List<Vector2> Uv = new();
         public List<int> Idx = new();
         public byte[]? AlbedoPng;
-        public uint AlbedoHash;
+        public byte[]? EmissivePng;
+        public uint MatHash;
     }
 
     /// <summary>Export a model; returns the written file path.</summary>
@@ -56,26 +57,19 @@ public static class ModelExporter
 
     private static List<PartData> Extract(PackageManager mgr, ModelGeometry geom, bool textures)
     {
-        var pngCache = new Dictionary<uint, byte[]?>();
+        var cache = new Dictionary<uint, (byte[]?, byte[]?)>();
         var list = new List<PartData>();
         // Export a single permutation (the default) so variant geometry doesn't overlap in the output.
         foreach (var part in geom.PartsForVariant(geom.DefaultVariant))
         {
             var pd = new PartData { Pos = part.Positions, Nrm = SmoothNormals(part.Positions, part.Indices), Uv = part.Texcoords, Idx = part.Indices };
-            if (textures && part.MaterialHash != 0 && MaterialMap.Albedo(mgr, part.MaterialHash) is uint th)
+            if (textures && part.MaterialHash != 0)
             {
-                pd.AlbedoHash = th;
-                if (!pngCache.TryGetValue(th, out var png))
-                {
-                    png = null;
-                    // Prefer the highest mip that decodes; large top mips often live in a separately-streamed
-                    // buffer that fails to resolve, so chain down to a smaller (reliable) mip rather than lose
-                    // the texture entirely.
-                    try { if (mgr.ByTag.TryGetValue(th, out var te) && (mgr.DecodeThumb(te, 2048) ?? mgr.DecodeThumb(te, 512) ?? mgr.DecodeThumb(te, 128) ?? mgr.Decode(te)) is { } d) png = EncodePng(d.rgba, d.width, d.height); }
-                    catch { }
-                    pngCache[th] = png;
-                }
-                pd.AlbedoPng = png;
+                // Reuse the preview's exact albedo + best-effort emissive resolution.
+                var (albedo, emissive) = ModelSceneBuilder.Maps(mgr, part.MaterialHash, cache);
+                pd.MatHash = part.MaterialHash;
+                pd.AlbedoPng = albedo;
+                pd.EmissivePng = emissive;
             }
             list.Add(pd);
         }
@@ -109,12 +103,14 @@ public static class ModelExporter
     private static MaterialBuilder MaterialFor(PartData p, Dictionary<uint, MaterialBuilder> cache)
     {
         if (p.AlbedoPng == null) return new MaterialBuilder("default").WithDoubleSide(true).WithMetallicRoughnessShader();
-        if (cache.TryGetValue(p.AlbedoHash, out var m)) return m;
-        m = new MaterialBuilder($"mat_{p.AlbedoHash:X8}")
+        if (cache.TryGetValue(p.MatHash, out var m)) return m;
+        m = new MaterialBuilder($"mat_{p.MatHash:X8}")
             .WithDoubleSide(true)
             .WithMetallicRoughnessShader()
             .WithBaseColor(ImageBuilder.From(new MemoryImage(p.AlbedoPng)));
-        cache[p.AlbedoHash] = m;
+        if (p.EmissivePng != null)
+            m.WithEmissive(ImageBuilder.From(new MemoryImage(p.EmissivePng)), new Vector3(1, 1, 1));
+        cache[p.MatHash] = m;
         return m;
     }
 
@@ -153,15 +149,21 @@ public static class ModelExporter
         for (int pi = 0; pi < parts.Count; pi++)
         {
             var p = parts[pi];
-            string matName = p.AlbedoHash != 0 ? $"mat_{p.AlbedoHash:X8}" : $"mat_{pi}";
-            if (written.Add(p.AlbedoHash == 0 ? (uint)(0x1000000 + pi) : p.AlbedoHash))
+            string matName = p.MatHash != 0 ? $"mat_{p.MatHash:X8}" : $"mat_{pi}";
+            if (written.Add(p.MatHash == 0 ? (uint)(0x1000000 + pi) : p.MatHash))
             {
                 mtl.Append($"newmtl {matName}\nKd 0.8 0.8 0.8\n");
                 if (p.AlbedoPng != null)
                 {
-                    string tex = $"{p.AlbedoHash:X8}.png";
+                    string tex = $"{p.MatHash:X8}.png";
                     File.WriteAllBytes(Path.Combine(outDir, tex), p.AlbedoPng);
                     mtl.Append($"map_Kd {tex}\n");
+                }
+                if (p.EmissivePng != null)
+                {
+                    string etex = $"{p.MatHash:X8}_e.png";
+                    File.WriteAllBytes(Path.Combine(outDir, etex), p.EmissivePng);
+                    mtl.Append($"Ke 1 1 1\nmap_Ke {etex}\n");
                 }
                 mtl.Append('\n');
             }
@@ -224,10 +226,18 @@ public static class ModelExporter
             var mat = new AiMaterial { Name = $"mat_{pi}" };
             if (p.AlbedoPng != null)
             {
-                string tex = $"{p.AlbedoHash:X8}.png";
-                if (written.Add(p.AlbedoHash)) File.WriteAllBytes(Path.Combine(outDir, tex), p.AlbedoPng);
+                string tex = $"{p.MatHash:X8}.png";
+                if (written.Add(p.MatHash)) File.WriteAllBytes(Path.Combine(outDir, tex), p.AlbedoPng);
                 mat.TextureDiffuse = new AiTextureSlot(tex, Assimp.TextureType.Diffuse, 0,
                     Assimp.TextureMapping.FromUV, 0, 1f, Assimp.TextureOperation.Multiply,
+                    Assimp.TextureWrapMode.Wrap, Assimp.TextureWrapMode.Wrap, 0);
+            }
+            if (p.EmissivePng != null)
+            {
+                string etex = $"{p.MatHash:X8}_e.png";
+                File.WriteAllBytes(Path.Combine(outDir, etex), p.EmissivePng);
+                mat.TextureEmissive = new AiTextureSlot(etex, Assimp.TextureType.Emissive, 0,
+                    Assimp.TextureMapping.FromUV, 0, 1f, Assimp.TextureOperation.Add,
                     Assimp.TextureWrapMode.Wrap, Assimp.TextureWrapMode.Wrap, 0);
             }
             scene.Materials.Add(mat);

@@ -99,7 +99,7 @@ public static class ModelSceneBuilder
     /// the gstack texture's green channel run through Marathon's exp2 response curve and modulated by the
     /// albedo (a factual reproduction of the engine's emission math). The curve self-gates: green below
     /// ~0.5 yields zero, so non-emissive materials produce a black (skipped) map and never falsely glow.</summary>
-    private static (byte[]? albedo, byte[]? emissive) Maps(PackageManager mgr, uint materialHash,
+    internal static (byte[]? albedo, byte[]? emissive) Maps(PackageManager mgr, uint materialHash,
         Dictionary<uint, (byte[]?, byte[]?)> cache)
     {
         if (cache.TryGetValue(materialHash, out var hit)) return hit;
