@@ -34,6 +34,11 @@
                     <TextBlock Text="DETAIL" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox Width="110" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
                               SelectedValuePath="Detail" SelectedValue="{Binding Detail}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <TextBlock Text="VARIANT" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"
+                               Visibility="{Binding HasPermutations, Converter={StaticResource BoolVis}}"/>
+                    <ComboBox Width="110" ItemsSource="{Binding Permutations}" DisplayMemberPath="Name"
+                              SelectedValuePath="Index" SelectedValue="{Binding SelectedPermutation}" VerticalAlignment="Center" Margin="0,0,18,0"
+                              Visibility="{Binding HasPermutations, Converter={StaticResource BoolVis}}"/>
                     <Button Click="OnPickBg" VerticalAlignment="Center" Margin="0,0,18,0" Padding="8,4">
                         <DockPanel LastChildFill="False">
                             <Border DockPanel.Dock="Left" Width="12" Height="12" BorderBrush="{StaticResource Outline2}"

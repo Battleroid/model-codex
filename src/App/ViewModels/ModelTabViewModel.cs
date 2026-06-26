@@ -25,6 +25,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     public EffectsManager EffectsManager { get; } = new DefaultEffectsManager();
     public ObservableElement3DCollection PreviewModels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<MaterialChannel> Channels { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<PermutationOption> Permutations { get; } = new();
 
     [ObservableProperty] private Camera _camera;
     [ObservableProperty] private string _previewInfo = "Loading…";
@@ -42,9 +43,20 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     public static IReadOnlyList<BgOption> BgOptions => LibraryViewModel.BgOptions;
 
     [ObservableProperty] private string _exportStatus = "";
+    [ObservableProperty] private int _selectedPermutation = -1;
+    public bool HasPermutations => Permutations.Count > 1;
 
     private ModelGeometry? _geom;
     private PreviewData? _lastData;
+    private int? _variant;
+    private bool _suppressPermReload;
+
+    partial void OnSelectedPermutationChanged(int value)
+    {
+        if (_suppressPermReload) return;
+        _variant = value < 0 ? null : value;
+        _ = LoadAsync();
+    }
 
     [RelayCommand]
     private async Task Export()
@@ -79,14 +91,28 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
         if (mgr == null) { PreviewInfo = "no index"; return; }
         bool textured = Textured;
         var detail = Detail;
+        int? variant = _variant;
         try
         {
-            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail));
+            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail, variant));
             _geom = data.Geometry;
             _lastData = data;
             ModelPreview.Populate(PreviewModels, data, Wireframe);
             Channels.Clear();
             foreach (var c in data.Channels) Channels.Add(c);
+            // Rebuild the permutation list only when the variant set changes (keeps the selection stable).
+            bool sameSet = Permutations.Count == data.Variants.Count
+                           && Permutations.Select(p => p.Index).SequenceEqual(data.Variants);
+            if (!sameSet)
+            {
+                _suppressPermReload = true;
+                Permutations.Clear();
+                for (int i = 0; i < data.Variants.Count; i++)
+                    Permutations.Add(new PermutationOption(data.Variants[i], $"Variant {i + 1}"));
+                SelectedPermutation = data.SelectedVariant;
+                OnPropertyChanged(nameof(HasPermutations));
+                _suppressPermReload = false;
+            }
             PreviewInfo = data.Info;
             FrameCamera();
         }
