@@ -1,0 +1,70 @@
+<Window x:Class="ModelCodex.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Height="520" Width="620" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource Bg}"
+        FontFamily="{StaticResource MonoFont}" TextElement.Foreground="{StaticResource TextC}">
+    <Grid Margin="22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="SETTINGS" Style="{StaticResource Display}" FontSize="22" Margin="0,0,0,18"/>
+
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="MARATHON GAME FOLDER" Style="{StaticResource k}"/>
+            <TextBlock Text="The folder containing packages\ and bin\x64\oo2core_9_win64.dll."
+                       Foreground="{StaticResource TextFaint}" FontSize="10" Margin="0,2,0,4"/>
+            <DockPanel Margin="0,0,0,16">
+                <Button DockPanel.Dock="Right" Content="Browse…" Click="OnBrowseGame" Margin="8,0,0,0"/>
+                <TextBox x:Name="GameDirBox"/>
+            </DockPanel>
+
+            <TextBlock Text="EXPORT FOLDER" Style="{StaticResource k}"/>
+            <TextBlock Text="Leave blank to use Downloads\ModelCodex."
+                       Foreground="{StaticResource TextFaint}" FontSize="10" Margin="0,2,0,4"/>
+            <DockPanel Margin="0,0,0,16">
+                <Button DockPanel.Dock="Right" Content="Browse…" Click="OnBrowseExport" Margin="8,0,0,0"/>
+                <TextBox x:Name="ExportDirBox"/>
+            </DockPanel>
+
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <TextBlock Text="DEFAULT EXPORT FORMAT" Style="{StaticResource k}" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="FormatBox">
+                        <ComboBoxItem Content="glTF 2.0 (.glb)" Tag="glb"/>
+                        <ComboBoxItem Content="OBJ + MTL" Tag="obj"/>
+                        <ComboBoxItem Content="FBX" Tag="fbx"/>
+                        <ComboBoxItem Content="STL" Tag="stl"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <TextBlock Text="DEFAULT SHADING" Style="{StaticResource k}" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="LookdevBox">
+                        <ComboBoxItem Content="Lookdev" Tag="lookdev"/>
+                        <ComboBoxItem Content="Shaded" Tag="shaded"/>
+                        <ComboBoxItem Content="Albedo" Tag="albedo"/>
+                        <ComboBoxItem Content="Normal" Tag="normal"/>
+                        <ComboBoxItem Content="Wireframe" Tag="wire"/>
+                    </ComboBox>
+                </StackPanel>
+            </Grid>
+
+            <CheckBox x:Name="ExportTexturesBox" Content="Export mapped textures alongside the model"
+                      Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
+            <CheckBox x:Name="IsometricBox" Content="Open model tabs in isometric projection by default"
+                      Foreground="{StaticResource TextC}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Cancel" Click="OnCancel"/>
+            <Button Content="Save" Style="{StaticResource Primary}" Margin="8,0,0,0" Click="OnSave"/>
+        </StackPanel>
+    </Grid>
+</Window>

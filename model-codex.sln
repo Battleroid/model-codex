@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E723B8B9-7950-4181-9900-B25FDF223EBE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tiger", "src\Tiger\Tiger.csproj", "{67E80572-836E-438F-A2C7-1D119935DD24}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Probe", "src\Probe\Probe.csproj", "{71B862C7-DDF7-41FF-89B6-19948736FAA1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModelCodex.App", "src\App\ModelCodex.App.csproj", "{7FE11580-EDEC-4D15-AF4B-41D670C3B709}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{67E80572-836E-438F-A2C7-1D119935DD24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67E80572-836E-438F-A2C7-1D119935DD24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67E80572-836E-438F-A2C7-1D119935DD24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67E80572-836E-438F-A2C7-1D119935DD24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71B862C7-DDF7-41FF-89B6-19948736FAA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71B862C7-DDF7-41FF-89B6-19948736FAA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71B862C7-DDF7-41FF-89B6-19948736FAA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71B862C7-DDF7-41FF-89B6-19948736FAA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FE11580-EDEC-4D15-AF4B-41D670C3B709}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FE11580-EDEC-4D15-AF4B-41D670C3B709}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FE11580-EDEC-4D15-AF4B-41D670C3B709}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FE11580-EDEC-4D15-AF4B-41D670C3B709}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{67E80572-836E-438F-A2C7-1D119935DD24} = {E723B8B9-7950-4181-9900-B25FDF223EBE}
+		{71B862C7-DDF7-41FF-89B6-19948736FAA1} = {E723B8B9-7950-4181-9900-B25FDF223EBE}
+		{7FE11580-EDEC-4D15-AF4B-41D670C3B709} = {E723B8B9-7950-4181-9900-B25FDF223EBE}
+	EndGlobalSection
+EndGlobal

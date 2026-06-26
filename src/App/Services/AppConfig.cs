@@ -1,0 +1,20 @@
+namespace ModelCodex.App.Services;
+
+/// <summary>Persisted user settings (see <see cref="AppState"/> for load/save).</summary>
+public sealed class AppConfig
+{
+    public string? GameDir { get; set; }
+    public string? ExportDir { get; set; }
+
+    /// <summary>Default model export format: "glb" | "obj" | "fbx" | "stl".</summary>
+    public string ExportFormat { get; set; } = "glb";
+    /// <summary>Export the model's mapped textures alongside it.</summary>
+    public bool ExportTextures { get; set; } = true;
+
+    /// <summary>Default shading mode in previews/tabs: "lookdev" | "shaded" | "albedo" | "normal" | "wire".</summary>
+    public string Lookdev { get; set; } = "lookdev";
+    /// <summary>Open model tabs in isometric projection by default (else perspective).</summary>
+    public bool IsometricByDefault { get; set; } = false;
+    /// <summary>Preview backdrop: "lookdev" (sky) or a "#RRGGBB" solid colour.</summary>
+    public string PreviewBg { get; set; } = "lookdev";
+}

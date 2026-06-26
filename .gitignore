@@ -1,0 +1,25 @@
+# Build output
+bin/
+obj/
+publish/
+*.user
+.vs/
+
+# Commercial fonts extracted from the game — not redistributed in source.
+# The app falls back to a system font if these are absent; drop your own
+# PP Fraktion Mono / MarathonShapiro OTFs here to restore the in-game look.
+src/App/Assets/Fonts/*.otf
+
+# Packaged release zips (build artifacts)
+model-codex-*.zip
+
+# Scratch screenshots / helper scripts
+_*.png
+_*.ps1
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

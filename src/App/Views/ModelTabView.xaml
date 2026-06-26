@@ -1,0 +1,98 @@
+<UserControl x:Class="ModelCodex.App.Views.ModelTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ModelCodex.App.ViewModels"
+             xmlns:hx="http://helix-toolkit.org/wpf/SharpDX"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance vm:ModelTabViewModel}"
+             Background="{StaticResource Bg}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Viewport + toolbar -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" Background="{StaticResource Panel}" BorderBrush="{StaticResource Outline}"
+                    BorderThickness="0,0,0,1" Padding="12,7">
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox Content="Isometric" IsChecked="{Binding Isometric}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Textured" IsChecked="{Binding Textured}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Wireframe" IsChecked="{Binding Wireframe}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Grid" IsChecked="{Binding ShowGrid}" Foreground="{StaticResource TextDim}" Margin="0,0,18,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="LIGHT" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox Width="100" ItemsSource="{Binding LightingStyles}" DisplayMemberPath="Name"
+                              SelectedValuePath="Style" SelectedValue="{Binding Lighting}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <TextBlock Text="DETAIL" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox Width="110" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
+                              SelectedValuePath="Detail" SelectedValue="{Binding Detail}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <TextBlock Text="BG" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox Width="90" ItemsSource="{Binding BgOptions}" DisplayMemberPath="Name"
+                              SelectedValuePath="Color" SelectedValue="{Binding PreviewBg}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <TextBlock Text="FOV" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <Slider Width="120" Minimum="15" Maximum="100" VerticalAlignment="Center"
+                            Value="{Binding Camera.FieldOfView, Mode=TwoWay}"
+                            IsEnabled="{Binding Isometric, Converter={StaticResource Not}}"/>
+                </StackPanel>
+            </Border>
+
+            <hx:Viewport3DX Grid.Row="1" Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
+                            BackgroundColor="{Binding PreviewBg}" ShowCoordinateSystem="True"
+                            CoordinateSystemLabelForeground="#9b9ba3"
+                            FixedRotationPointEnabled="True" IsInertiaEnabled="True" CameraMode="Inspect"
+                            ShowViewCube="True">
+                <hx:AmbientLight3D Color="{Binding Lights.Ambient}"/>
+                <hx:DirectionalLight3D Color="{Binding Lights.Key}" Direction="{Binding Lights.KeyDir}"/>
+                <hx:DirectionalLight3D Color="{Binding Lights.Fill}" Direction="{Binding Lights.FillDir}"/>
+                <hx:DirectionalLight3D Color="{Binding Lights.Rim}" Direction="{Binding Lights.RimDir}"/>
+                <hx:ItemsModel3D ItemsSource="{Binding PreviewModels}"/>
+            </hx:Viewport3DX>
+        </Grid>
+
+        <!-- Right info / channels -->
+        <Border Grid.Column="1" Background="{StaticResource Inset2}" BorderBrush="{StaticResource Outline}"
+                BorderThickness="1,0,0,0">
+            <DockPanel Margin="12">
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Text="{Binding Entry.TagId}" Style="{StaticResource Display}" FontSize="24"/>
+                    <TextBlock Text="{Binding Category}" Foreground="{StaticResource Accent}" FontSize="11" Margin="0,2,0,8"/>
+                    <TextBlock Text="{Binding PreviewInfo}" Foreground="{StaticResource TextDim}" FontSize="11"
+                               TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <TextBlock Text="CHANNELS" Style="{StaticResource k}" Margin="0,0,0,4"/>
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Bottom">
+                    <TextBlock Text="{Binding ExportStatus}" Foreground="{StaticResource TextDim}" FontSize="10"
+                               TextWrapping="Wrap" Margin="0,8,0,6"/>
+                    <Button Content="Export" Style="{StaticResource Primary}" HorizontalAlignment="Left"
+                            Command="{Binding ExportCommand}"/>
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Channels}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource Inset}" Margin="0,0,0,2" Padding="6,3">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Format}"
+                                                   Foreground="{StaticResource TextFaint}" FontSize="9" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding TagId}" Foreground="{StaticResource TextC}" FontSize="10" Width="78"/>
+                                        <TextBlock Foreground="{StaticResource TextDim}" FontSize="9" VerticalAlignment="Center">
+                                            <Run Text="{Binding Width, Mode=OneWay}"/><Run Text="×"/><Run Text="{Binding Height, Mode=OneWay}"/>
+                                        </TextBlock>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

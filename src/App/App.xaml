@@ -1,0 +1,26 @@
+<Application x:Class="ModelCodex.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ModelCodex.App.ViewModels"
+             xmlns:views="clr-namespace:ModelCodex.App.Views"
+             xmlns:local="clr-namespace:ModelCodex.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Codex.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <local:InverseBoolConverter x:Key="Not"/>
+            <local:BoolToVisibilityConverter x:Key="BoolVis"/>
+            <local:CountToVisibilityConverter x:Key="CountVis"/>
+
+            <!-- VM -> View mapping (WPF-native equivalent of Avalonia's ViewLocator). -->
+            <DataTemplate DataType="{x:Type vm:LibraryViewModel}">
+                <views:LibraryView/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ModelTabViewModel}">
+                <views:ModelTabView/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

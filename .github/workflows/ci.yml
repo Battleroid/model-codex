@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore model-codex.sln
+
+      - name: Build
+        run: dotnet build model-codex.sln -c Release --no-restore
+
+      # Self-contained win-x64 build, uploaded as a downloadable artifact for every push.
+      - name: Publish
+        run: dotnet publish src/App/ModelCodex.App.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-codex-win-x64
+          path: publish/
+          if-no-files-found: error
