@@ -119,7 +119,9 @@ public static class ModelExporter
         var pos = p.Pos[i];
         var nrm = i < p.Nrm.Count ? p.Nrm[i] : Vector3.UnitZ;
         var uv = i < p.Uv.Count ? p.Uv[i] : Vector2.Zero;
-        return (new VertexPositionNormal(pos, nrm), new VertexTexture1(uv));
+        // glTF uses a top-left (V-down) UV origin like the corrected HelixToolkit preview; the parser's
+        // texcoords are V-up (matches OBJ/FBX), so flip V for glTF to render the right way up in Blender.
+        return (new VertexPositionNormal(pos, nrm), new VertexTexture1(new Vector2(uv.X, 1f - uv.Y)));
     }
 
     /// <summary>Recompute per-vertex smooth normals (decoded Tiger normals are quaternion-packed and unreliable).</summary>
