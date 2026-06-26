@@ -152,6 +152,9 @@
                                   SelectedValuePath="Style" SelectedValue="{Binding Lighting}" FontSize="11" Margin="0,0,0,4"/>
                         <ComboBox Width="120" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
                                   SelectedValuePath="Detail" SelectedValue="{Binding Detail}" FontSize="11" Margin="0,0,0,4"/>
+                        <ComboBox Width="120" ItemsSource="{Binding Permutations}" DisplayMemberPath="Name"
+                                  SelectedValuePath="Index" SelectedValue="{Binding SelectedPermutation}" FontSize="11" Margin="0,0,0,4"
+                                  Visibility="{Binding HasPermutations, Converter={StaticResource BoolVis}}"/>
                         <Button Width="120" Height="24" Click="OnPickBg" HorizontalContentAlignment="Stretch" Padding="6,0">
                             <DockPanel LastChildFill="False">
                                 <Border DockPanel.Dock="Left" Width="13" Height="13" BorderBrush="{StaticResource Outline2}"

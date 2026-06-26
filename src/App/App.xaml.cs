@@ -51,6 +51,12 @@ public partial class App : Application
                 vm.Library.SelectedPackage = vm.Library.Packages.FirstOrDefault(p => p.PkgId == entry.PkgId);
                 await Task.Delay(400);
                 vm.Library.SelectedTile = vm.Library.VisibleModels.FirstOrDefault(t => t.TagHash == hash);
+                // Optional 4th arg: select a permutation/variant index to verify the switcher.
+                if (args.Length >= 4 && int.TryParse(args[3], out int varIdx))
+                {
+                    await Task.Delay(2500);
+                    if (vm.Library.Permutations.Count > varIdx) vm.Library.SelectedPermutation = vm.Library.Permutations[varIdx].Index;
+                }
             }
             await Task.Delay(3000); // let the viewport parse + upload textures + render
 

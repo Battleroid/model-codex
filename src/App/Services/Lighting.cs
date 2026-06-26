@@ -10,6 +10,7 @@ public enum LightingStyle { Lookdev, Studio, Sun, Flat }
 public sealed record LightingOption(LightingStyle Style, string Name) { public override string ToString() => Name; }
 public sealed record DetailOption(Tiger.Model.ModelDetail Detail, string Name) { public override string ToString() => Name; }
 public sealed record BgOption(Color Color, string Name) { public override string ToString() => Name; }
+public sealed record PermutationOption(int Index, string Name) { public override string ToString() => Name; }
 
 /// <summary>A fixed 4-light rig (1 ambient + 3 directional) for a lighting style.</summary>
 public readonly record struct LightRig(

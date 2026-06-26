@@ -40,6 +40,9 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     /// <summary>Texture channels of the selected model's materials (for the channels panel).</summary>
     public ObservableCollection<MaterialChannel> Channels { get; } = new();
 
+    /// <summary>Permutations/variants of the selected model (gear/skin colour sets); empty when none.</summary>
+    public ObservableCollection<PermutationOption> Permutations { get; } = new();
+
     /// <summary>Live light rig bound by the viewport (direct children illuminate; ItemsModel3D ones don't).</summary>
     public LightingState Lights { get; } = new();
 
@@ -122,14 +125,26 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     partial void OnSelectedPackageChanged(PackageGroup? value) => ApplyFilter();
 
     [ObservableProperty] private MaterialChannel? _selectedChannel;
+    [ObservableProperty] private int _selectedPermutation = -1;
+    public bool HasPermutations => Permutations.Count > 1;
     private uint? _overrideAlbedo;
+    private int? _variant;
+    private bool _suppressPermReload;
 
     partial void OnSelectedTileChanged(ModelTile? value)
     {
         OnPropertyChanged(nameof(SelectedModel));
         _overrideAlbedo = null;
+        _variant = null; // new model -> back to its default permutation
         _selectedChannel = null; // Channels list rebuilds, clearing the selection visually
         if (value != null) _ = PreviewAsync(value.Entry);
+    }
+
+    partial void OnSelectedPermutationChanged(int value)
+    {
+        if (_suppressPermReload || SelectedTile == null) return;
+        _variant = value < 0 ? null : value;
+        _ = PreviewAsync(SelectedTile.Entry);
     }
 
     partial void OnSelectedChannelChanged(MaterialChannel? value)
@@ -149,7 +164,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         {
             uint? over = _overrideAlbedo;
             var detail = Detail;
-            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail));
+            int? variant = _variant;
+            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail, variant));
             if (token != _previewToken) return; // a newer selection won
 
             if (data.Geometry is { } g)
@@ -165,6 +181,20 @@ public sealed partial class LibraryViewModel : TabItemViewModel
             {
                 Channels.Clear();
                 foreach (var c in data.Channels) Channels.Add(c);
+            }
+            // Rebuild the permutation selector only when the variant SET changes (i.e. a new model) —
+            // not on a pure permutation switch, which would clear the list and blank the ComboBox display.
+            bool sameSet = Permutations.Count == data.Variants.Count
+                           && Permutations.Select(p => p.Index).SequenceEqual(data.Variants);
+            if (!sameSet)
+            {
+                _suppressPermReload = true;
+                Permutations.Clear();
+                for (int i = 0; i < data.Variants.Count; i++)
+                    Permutations.Add(new PermutationOption(data.Variants[i], $"Variant {i + 1}"));
+                SelectedPermutation = data.SelectedVariant;
+                OnPropertyChanged(nameof(HasPermutations));
+                _suppressPermReload = false;
             }
             PreviewInfo = data.Info;
             if (data.Geometry is { } geom && Camera is PerspectiveCamera pc) ModelPreview.Frame(pc, geom);
