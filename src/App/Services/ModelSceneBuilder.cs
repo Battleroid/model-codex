@@ -189,8 +189,8 @@ public static class ModelSceneBuilder
     private static (byte[] rgba, int width, int height)? DecodeRobust(PackageManager mgr, uint texHash)
     {
         if (!mgr.ByTag.TryGetValue(texHash, out var te)) return null;
-        return mgr.DecodeThumb(te, 512) ?? mgr.DecodeThumb(te, 256)
-               ?? mgr.DecodeThumb(te, 128) ?? mgr.DecodeThumb(te, 64) ?? mgr.Decode(te);
+        return mgr.DecodeThumb(te, 2048) ?? mgr.DecodeThumb(te, 1024) ?? mgr.DecodeThumb(te, 512)
+               ?? mgr.DecodeThumb(te, 256) ?? mgr.DecodeThumb(te, 128) ?? mgr.DecodeThumb(te, 64) ?? mgr.Decode(te);
     }
 
     // Genuine emission is LOCALIZED (screens, energy lines, indicators — a few % of the atlas). A gstack

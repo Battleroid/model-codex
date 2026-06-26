@@ -456,6 +456,7 @@ else if (cmd == "entity")
         }
     }
 
+    var mgr = new PackageManager(PKG_DIR, OODLE); mgr.Index((a, b) => { });
     foreach (uint em in found.Take(2))
     {
         byte[] d = Read(em)!;
@@ -471,6 +472,11 @@ else if (cmd == "entity")
             float sz = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xA8));
             float tx = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xB0));
             Console.WriteLine($"  Meshes count={mCount} dataOff=0x{mOff:X}  ModelScale=({sx:F3},{sy:F3},{sz:F3}) ModelTrans.X={tx:F3}");
+            float tcsx = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xC0));
+            float tcsy = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xC4));
+            float tctx = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xC8));
+            float tcty = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(0xCC));
+            Console.WriteLine($"  TexcoordScale=({tcsx:F5},{tcsy:F5}) TexcoordTrans=({tctx:F5},{tcty:F5})");
             // First mesh buffer refs + parts.
             if (mCount > 0 && mOff + 0x30 <= d.Length)
             {
@@ -478,6 +484,22 @@ else if (cmd == "entity")
                 uint v2 = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(mOff + 0x04));
                 uint ib = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(mOff + 0x10));
                 Console.WriteLine($"  mesh[0] Vertices1={v1:X8}({E(v1)?.FileType}/{E(v1)?.FileSubType}) Vertices2={v2:X8}({E(v2)?.FileType}/{E(v2)?.FileSubType}) Indices={ib:X8}({E(ib)?.FileType}/{E(ib)?.FileSubType})");
+                // Diagnose UVs: load both vertex buffers, report strides + raw int16 UV ranges.
+                foreach (var (label, vh) in new[] { ("V1", v1), ("V2", v2) })
+                {
+                    var vb = Tiger.Model.VertexBuffer.Load(mgr, vh);
+                    if (vb == null) { Console.WriteLine($"  {label} {vh:X8}: load failed"); continue; }
+                    Console.WriteLine($"  {label} {vh:X8} stride=0x{vb.Stride:X} type={vb.Type} verts={vb.VertexCount} providesPos={vb.ProvidesPosition} providesUV={vb.ProvidesTexcoord}");
+                    if (vb.ProvidesTexcoord)
+                    {
+                        float minu = 9, maxu = -9, minv = 9, maxv = -9;
+                        int n = Math.Min(vb.VertexCount, 6000);
+                        for (int vi = 0; vi < n; vi++)
+                            if (vb.Decode(vi, out _, out _, out var uvn) && uvn is System.Numerics.Vector2 uvv)
+                            { minu = Math.Min(minu, uvv.X); maxu = Math.Max(maxu, uvv.X); minv = Math.Min(minv, uvv.Y); maxv = Math.Max(maxv, uvv.Y); }
+                        Console.WriteLine($"     rawUV(snorm) U[{minu:F3},{maxu:F3}] V[{minv:F3},{maxv:F3}]");
+                    }
+                }
                 long pCount = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(mOff + 0x20));
                 long pRel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(mOff + 0x28));
                 int pOff = mOff + 0x20 + 0x18 + (int)pRel;
@@ -537,6 +559,42 @@ else if (cmd == "dtex")
     string path = Path.Combine(OUT, $"dtex_{th:X8}.png");
     img.SaveAsPng(path);
     Console.WriteLine($"{th:X8} {d.width}x{d.height} -> {path}");
+}
+else if (cmd == "uvscan")
+{
+    // Characterize entity texcoord buffers: (type,stride) histogram + UV-span when decoded as int16 SNORM.
+    // A narrow span (e.g. ~0.1) is the tell-tale of a float16 buffer being misread as int16.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    int sample = args.Length > 1 ? int.Parse(args[1]) : 600;
+    var ents = mgr.Models.Where(m => m.IsEntity).Take(sample).ToList();
+    var hist = new Dictionary<string, int>();
+    int narrow = 0, wide = 0, examined = 0;
+    foreach (var e in ents)
+    {
+        var (model, resource) = Tiger.Model.EntityMesh.ResolveModel(mgr, e.TagHash);
+        if (model is not uint mh) continue;
+        byte[]? d = mgr.ReadTag(mh);
+        if (d == null || d.Length < 0x130) continue;
+        long mc = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(0x10));
+        long mr = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(0x18));
+        int mo = 0x10 + 0x18 + (int)mr;
+        if (mc < 1 || mo + 0x10 > d.Length) continue;
+        uint v2 = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(mo + 0x04));
+        var vb = Tiger.Model.VertexBuffer.Load(mgr, v2);
+        if (vb == null) continue;
+        hist[$"type{vb.Type}/stride0x{vb.Stride:X}"] = hist.GetValueOrDefault($"type{vb.Type}/stride0x{vb.Stride:X}") + 1;
+        if (!vb.ProvidesTexcoord) continue;
+        float mn = 9, mx = -9; int n = Math.Min(vb.VertexCount, 4000);
+        for (int vi = 0; vi < n; vi++)
+            if (vb.Decode(vi, out _, out _, out var uvn) && uvn is System.Numerics.Vector2 uvv)
+            { mn = Math.Min(mn, Math.Min(uvv.X, uvv.Y)); mx = Math.Max(mx, Math.Max(uvv.X, uvv.Y)); }
+        examined++;
+        if (mx - mn < 0.6) narrow++; else wide++;
+    }
+    Console.WriteLine("texcoord-buffer (type/stride) histogram:");
+    foreach (var kv in hist.OrderByDescending(k => k.Value)) Console.WriteLine($"  {kv.Key} = {kv.Value}");
+    Console.WriteLine($"UV span when read as int16: wide(>=0.6)={wide}  narrow(<0.6, likely float16 misread)={narrow}  of {examined} examined");
 }
 else if (cmd == "emisscan")
 {
