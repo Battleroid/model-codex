@@ -50,7 +50,7 @@ public static class ModelPreview
         return new PreviewData(g, parts, channels, info, full.Variants, sel);
     }
 
-    public static HxMaterial MakeMaterial(byte[]? albedoDds)
+    public static HxMaterial MakeMaterial(byte[]? albedoDds, byte[]? emissiveDds = null)
     {
         // Lit material. AmbientColor lets ambient light contribute; tiny emissive avoids pure-black faces.
         var mat = new PhongMaterial
@@ -62,6 +62,12 @@ public static class ModelPreview
         };
         if (albedoDds != null) { mat.DiffuseColor = Color.White; mat.DiffuseMap = new TextureModel(new MemoryStream(albedoDds), true); }
         else mat.DiffuseColor = new Color4(0.78f, 0.79f, 0.82f, 1f);
+        // Best-effort emissive: a mostly-black map that lights up only the genuinely glowing regions.
+        if (emissiveDds != null)
+        {
+            mat.EmissiveColor = Color.White;
+            mat.EmissiveMap = new TextureModel(new MemoryStream(emissiveDds), true);
+        }
         return mat;
     }
 
@@ -72,7 +78,7 @@ public static class ModelPreview
             yield return new MeshGeometryModel3D
             {
                 Geometry = p.Geometry,
-                Material = MakeMaterial(p.AlbedoDds),
+                Material = MakeMaterial(p.AlbedoDds, p.EmissiveDds),
                 CullMode = SharpDX.Direct3D11.CullMode.Back,
                 RenderWireframe = wireframe,
                 WireframeColor = System.Windows.Media.Colors.Lime,

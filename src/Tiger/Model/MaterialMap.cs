@@ -77,4 +77,41 @@ public static class MaterialMap
         uint pick = firstSrgb != 0 ? firstSrgb : (largestSrgb != 0 ? largestSrgb : first);
         return pick == 0 ? null : pick;
     }
+
+    /// <summary>Pick the "gstack" packed map (metalness/emission/transmission) for best-effort emissive:
+    /// the largest non-sRGB texture that isn't the normal map or a tiny/detail map. Heuristic — Marathon
+    /// has no fixed slot semantics (the pixel shader decides), so this is a reasonable approximation.</summary>
+    public static uint? Gstack(PackageManager mgr, uint materialHash)
+    {
+        uint best = 0; long bestArea = 0; uint albedo = Albedo(mgr, materialHash) ?? 0;
+        foreach (uint t in TextureRefs(mgr, materialHash))
+        {
+            if (t == albedo || !mgr.ByTag.TryGetValue(t, out var te)) continue;
+            try
+            {
+                var h = mgr.LoadHeader(te);
+                if (TigerTexture.IsSrgb(h.DxgiFormat)) continue;          // colour map, not a data pack
+                if (h.Width <= 8 || h.Height <= 8) continue;              // dummy/detail
+                if (IsNormalMap(mgr, te)) continue;                       // tangent-space normal
+                long area = (long)h.Width * h.Height;
+                if (area > bestArea) { bestArea = area; best = t; }
+            }
+            catch { }
+        }
+        return best == 0 ? null : best;
+    }
+
+    /// <summary>A tangent-space normal map reads ~(128,128,255): flat blue. Sample a tiny mip to detect it.</summary>
+    private static bool IsNormalMap(PackageManager mgr, TextureEntry te)
+    {
+        try
+        {
+            if (mgr.DecodeThumb(te, 16) is not { } d || d.rgba.Length < 16) return false;
+            long r = 0, g = 0, b = 0; int n = d.rgba.Length / 4;
+            for (int i = 0; i < d.rgba.Length; i += 4) { r += d.rgba[i]; g += d.rgba[i + 1]; b += d.rgba[i + 2]; }
+            int ar = (int)(r / n), ag = (int)(g / n), ab = (int)(b / n);
+            return ab > 200 && Math.Abs(ar - 128) < 40 && Math.Abs(ag - 128) < 40;
+        }
+        catch { return false; }
+    }
 }

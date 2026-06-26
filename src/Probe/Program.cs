@@ -538,6 +538,65 @@ else if (cmd == "dtex")
     img.SaveAsPng(path);
     Console.WriteLine($"{th:X8} {d.width}x{d.height} -> {path}");
 }
+else if (cmd == "emisscan")
+{
+    // Find entity models whose gstack green channel has strong (>0.5) regions -> would glow.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    int sample = args.Length > 1 ? int.Parse(args[1]) : 400;
+    var ents = mgr.Models.Where(m => m.IsEntity).Take(sample).ToList();
+    var hits = new List<(uint model, uint gstack, double frac)>();
+    foreach (var e in ents)
+    {
+        try
+        {
+            var geom = Tiger.Model.ModelParse.Parse(mgr, e);
+            if (geom == null) continue;
+            foreach (var part in geom.Parts.Where(p => p.MaterialHash != 0).DistinctBy(p => p.MaterialHash))
+            {
+                if (Tiger.Model.MaterialMap.Gstack(mgr, part.MaterialHash) is not uint gh) continue;
+                if (!mgr.ByTag.TryGetValue(gh, out var te)) continue;
+                var d = mgr.Decode(te) ?? mgr.DecodeThumb(te, 256);
+                if (d is not { } dd) continue;
+                int n = dd.rgba.Length / 4, hi = 0;
+                for (int i = 0; i < dd.rgba.Length; i += 4) if (dd.rgba[i + 1] > 140) hi++;
+                double frac = (double)hi / n;
+                if (frac is > 0.003 and < 0.30) { hits.Add((e.TagHash, gh, frac)); break; }
+            }
+        }
+        catch { }
+    }
+    foreach (var h in hits.OrderByDescending(h => h.frac).Take(25))
+        Console.WriteLine($"{h.model:X8}  gstack={h.gstack:X8}  greenHi={h.frac * 100:F1}%");
+    Console.WriteLine($"scanned {ents.Count} entities, {hits.Count} in sparse-emissive range");
+}
+else if (cmd == "chan")
+{
+    // Split a texture into R/G/B grayscale PNGs + per-channel stats (identify packed gstack channels).
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint th = Convert.ToUInt32(args[1], 16);
+    if (!mgr.ByTag.TryGetValue(th, out var te)) { Console.WriteLine("not a texture"); return; }
+    var dec = mgr.DecodeThumb(te, 512);
+    if (dec is not { } d) { Console.WriteLine("decode failed"); return; }
+    int n = d.rgba.Length / 4;
+    for (int c = 0; c < 3; c++)
+    {
+        var g = new byte[d.rgba.Length];
+        long sum = 0; int hi = 0;
+        for (int i = 0; i < n; i++)
+        {
+            byte v = d.rgba[i * 4 + c];
+            g[i * 4] = g[i * 4 + 1] = g[i * 4 + 2] = v; g[i * 4 + 3] = 255;
+            sum += v; if (v > 128) hi++;
+        }
+        using var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(g, d.width, d.height);
+        string ch = "RGB"[c].ToString();
+        string path = Path.Combine(OUT, $"chan_{th:X8}_{ch}.png");
+        img.SaveAsPng(path);
+        Console.WriteLine($"  {ch}: avg={sum / n,3}  >128={100.0 * hi / n,5:F1}%  -> {path}");
+    }
+}
 else if (cmd == "mattex")
 {
     // Decode a material's textures to PNG + report average colour (find the colourful albedo).
