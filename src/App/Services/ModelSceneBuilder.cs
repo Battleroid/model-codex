@@ -13,10 +13,13 @@ namespace ModelCodex.App.Services;
 public sealed class PartRender
 {
     public MeshGeometry3D Geometry { get; init; } = null!;
-    /// <summary>Albedo texture (PNG-encoded), or null for an untextured part.</summary>
+    /// <summary>Albedo texture (PNG-encoded), or null for an untextured part. In a channel-view this
+    /// carries the selected channel's image instead.</summary>
     public byte[]? AlbedoDds { get; init; }
     /// <summary>Best-effort emissive map (PNG), or null when the material isn't emissive.</summary>
     public byte[]? EmissiveDds { get; init; }
+    /// <summary>True in a material channel-view: render the texture flat/unlit (no shading).</summary>
+    public bool Unlit { get; init; }
 }
 
 /// <summary>Converts decoded <see cref="Tiger.Model.ModelGeometry"/> into HelixToolkit mesh data,
@@ -40,11 +43,14 @@ public static class ModelSceneBuilder
 
     /// <summary>One mesh per part, each with its resolved albedo texture (PNG) when <paramref name="textured"/>.
     /// If <paramref name="overrideAlbedo"/> is set, that texture is used for every part (channel preview).</summary>
-    public static List<PartRender> BuildParts(TModel geom, PackageManager mgr, bool textured, uint? overrideAlbedo = null)
+    public static List<PartRender> BuildParts(TModel geom, PackageManager mgr, bool textured,
+        uint? overrideAlbedo = null, MaterialView view = MaterialView.Shaded)
     {
         var result = new List<PartRender>();
         var texCache = new Dictionary<uint, byte[]?>();
         var mapCache = new Dictionary<uint, (byte[]? albedo, byte[]? emissive)>();
+        var channelCache = new Dictionary<uint, byte[]?>();
+        bool unlit = view != MaterialView.Shaded;
 
         foreach (var part in geom.Parts)
         {
@@ -56,7 +62,11 @@ public static class ModelSceneBuilder
             AppendPart(part, positions, indices, normals, texcoords, ref baseV);
 
             byte[]? albedo = null, emissive = null;
-            if (overrideAlbedo is uint forced)
+            if (unlit && part.MaterialHash != 0)
+            {
+                albedo = ChannelImage(mgr, part.MaterialHash, view, channelCache);
+            }
+            else if (overrideAlbedo is uint forced)
             {
                 albedo = AlbedoPng(mgr, forced, texCache);
             }
@@ -70,9 +80,61 @@ public static class ModelSceneBuilder
                 Geometry = Finish(positions, indices, normals, texcoords),
                 AlbedoDds = albedo,
                 EmissiveDds = emissive,
+                Unlit = unlit,
             });
         }
         return result;
+    }
+
+    /// <summary>Resolve the image for a single material channel-view (cached per material). Albedo/Normal
+    /// are their own textures; Metalness/Emission/Transmission are the gstack R/G/B shown grayscale.</summary>
+    private static byte[]? ChannelImage(PackageManager mgr, uint materialHash, MaterialView view,
+        Dictionary<uint, byte[]?> cache)
+    {
+        if (cache.TryGetValue(materialHash, out var hit)) return hit;
+        byte[]? png = null;
+        try
+        {
+            switch (view)
+            {
+                case MaterialView.Albedo:
+                    png = MaterialMap.Albedo(mgr, materialHash) is uint ah ? AlbedoRgb(mgr, ah) : null;
+                    break;
+                case MaterialView.Normal:
+                    png = MaterialMap.Normal(mgr, materialHash) is uint nh ? AlbedoRgb(mgr, nh) : null;
+                    break;
+                case MaterialView.Metalness:
+                case MaterialView.Emission:
+                case MaterialView.Transmission:
+                    int ch = view == MaterialView.Metalness ? 0 : view == MaterialView.Emission ? 1 : 2;
+                    if (MaterialMap.Gstack(mgr, materialHash) is uint gh && DecodeRobust(mgr, gh) is { } g)
+                        png = GrayscaleChannel(g.rgba, g.width, g.height, ch);
+                    break;
+            }
+        }
+        catch { }
+        cache[materialHash] = png;
+        return png;
+    }
+
+    /// <summary>Decode a texture to an opaque RGB PNG (no alpha-mask flattening tricks; used for channel views).</summary>
+    private static byte[]? AlbedoRgb(PackageManager mgr, uint texHash)
+    {
+        if (DecodeRobust(mgr, texHash) is not { } d) return null;
+        var arr = (byte[])d.rgba.Clone();
+        for (int i = 3; i < arr.Length; i += 4) arr[i] = 255;
+        return EncodePng(arr, d.width, d.height);
+    }
+
+    private static byte[] GrayscaleChannel(byte[] rgba, int w, int h, int channel)
+    {
+        var outRgba = new byte[rgba.Length];
+        for (int i = 0; i < rgba.Length; i += 4)
+        {
+            byte v = rgba[i + channel];
+            outRgba[i] = outRgba[i + 1] = outRgba[i + 2] = v; outRgba[i + 3] = 255;
+        }
+        return EncodePng(outRgba, w, h);
     }
 
     /// <summary>Decode one texture to an opaque albedo PNG (cached). The diffuse-map alpha is a mask, not

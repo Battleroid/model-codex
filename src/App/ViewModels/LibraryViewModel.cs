@@ -51,10 +51,20 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private bool _textured = true;
     [ObservableProperty] private bool _hideEmpty = true;
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
+    [ObservableProperty] private MaterialView _materialView = MaterialView.Shaded;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
     [ObservableProperty] private MColor _previewBg = MColor.FromRgb(0x10, 0x10, 0x14);
 
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
+    public static IReadOnlyList<MaterialViewOption> MaterialViews { get; } = new[]
+    {
+        new MaterialViewOption(MaterialView.Shaded, "Shaded"),
+        new MaterialViewOption(MaterialView.Albedo, "Albedo"),
+        new MaterialViewOption(MaterialView.Normal, "Normal"),
+        new MaterialViewOption(MaterialView.Metalness, "Metalness"),
+        new MaterialViewOption(MaterialView.Emission, "Emission"),
+        new MaterialViewOption(MaterialView.Transmission, "Transmission"),
+    };
     public static IReadOnlyList<DetailOption> DetailLevels { get; } = new[]
     {
         new DetailOption(ModelDetail.MostDetailed, "Most detail"),
@@ -82,6 +92,11 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     }
 
     partial void OnDetailChanged(ModelDetail value)
+    {
+        if (SelectedTile != null) _ = PreviewAsync(SelectedTile.Entry);
+    }
+
+    partial void OnMaterialViewChanged(MaterialView value)
     {
         if (SelectedTile != null) _ = PreviewAsync(SelectedTile.Entry);
     }
@@ -165,7 +180,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
             uint? over = _overrideAlbedo;
             var detail = Detail;
             int? variant = _variant;
-            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail, variant));
+            var matView = MaterialView;
+            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail, variant, matView));
             if (token != _previewToken) return; // a newer selection won
 
             if (data.Geometry is { } g)

@@ -21,7 +21,7 @@ public sealed record PreviewData(
 public static class ModelPreview
 {
     public static PreviewData Load(PackageManager mgr, ModelEntry entry, bool textured, uint? overrideAlbedo = null,
-        ModelDetail detail = ModelDetail.MostDetailed, int? variant = null)
+        ModelDetail detail = ModelDetail.MostDetailed, int? variant = null, MaterialView view = MaterialView.Shaded)
     {
         var full = ModelParse.Parse(mgr, entry, detail);
         if (full == null || full.VertexCount == 0)
@@ -32,7 +32,7 @@ public static class ModelPreview
         int sel = variant ?? full.DefaultVariant;
         var g = full.WithVariant(sel);
 
-        var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo);
+        var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo, view);
 
         var channels = new List<MaterialChannel>();
         var seenMat = new HashSet<uint>();
@@ -50,8 +50,16 @@ public static class ModelPreview
         return new PreviewData(g, parts, channels, info, full.Variants, sel);
     }
 
-    public static HxMaterial MakeMaterial(byte[]? albedoDds, byte[]? emissiveDds = null)
+    public static HxMaterial MakeMaterial(byte[]? albedoDds, byte[]? emissiveDds = null, bool unlit = false)
     {
+        // Channel-view: show the texture flat/unlit via emissive only (black diffuse so lighting is ignored).
+        if (unlit)
+        {
+            var flat = new PhongMaterial { DiffuseColor = Color.Black, AmbientColor = Color.Black };
+            if (albedoDds != null) { flat.EmissiveColor = Color.White; flat.EmissiveMap = new TextureModel(new MemoryStream(albedoDds), true); }
+            else flat.EmissiveColor = new Color4(0.5f, 0.5f, 0.5f, 1f);
+            return flat;
+        }
         // Lit material. AmbientColor lets ambient light contribute; tiny emissive avoids pure-black faces.
         var mat = new PhongMaterial
         {
@@ -78,7 +86,7 @@ public static class ModelPreview
             yield return new MeshGeometryModel3D
             {
                 Geometry = p.Geometry,
-                Material = MakeMaterial(p.AlbedoDds, p.EmissiveDds),
+                Material = MakeMaterial(p.AlbedoDds, p.EmissiveDds, p.Unlit),
                 CullMode = SharpDX.Direct3D11.CullMode.Back,
                 RenderWireframe = wireframe,
                 WireframeColor = System.Windows.Media.Colors.Lime,

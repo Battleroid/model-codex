@@ -101,6 +101,19 @@ public static class MaterialMap
         return best == 0 ? null : best;
     }
 
+    /// <summary>The material's tangent-space normal map, if present (largest one detected).</summary>
+    public static uint? Normal(PackageManager mgr, uint materialHash)
+    {
+        uint best = 0; long bestArea = 0;
+        foreach (uint t in TextureRefs(mgr, materialHash))
+        {
+            if (!mgr.ByTag.TryGetValue(t, out var te) || !IsNormalMap(mgr, te)) continue;
+            try { var h = mgr.LoadHeader(te); long a = (long)h.Width * h.Height; if (a > bestArea) { bestArea = a; best = t; } }
+            catch { }
+        }
+        return best == 0 ? null : best;
+    }
+
     /// <summary>A tangent-space normal map reads ~(128,128,255): flat blue. Sample a tiny mip to detect it.</summary>
     private static bool IsNormalMap(PackageManager mgr, TextureEntry te)
     {

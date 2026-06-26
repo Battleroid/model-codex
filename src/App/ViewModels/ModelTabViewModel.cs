@@ -34,11 +34,13 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     [ObservableProperty] private bool _wireframe;
     [ObservableProperty] private bool _showGrid = true;
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
+    [ObservableProperty] private MaterialView _materialView = MaterialView.Shaded;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
     [ObservableProperty] private MColor _previewBg = MColor.FromRgb(0x10, 0x10, 0x14);
 
     public LightingState Lights { get; } = new();
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
+    public static IReadOnlyList<MaterialViewOption> MaterialViews => LibraryViewModel.MaterialViews;
     public static IReadOnlyList<DetailOption> DetailLevels => LibraryViewModel.DetailLevels;
     public static IReadOnlyList<BgOption> BgOptions => LibraryViewModel.BgOptions;
 
@@ -92,9 +94,10 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
         bool textured = Textured;
         var detail = Detail;
         int? variant = _variant;
+        var matView = MaterialView;
         try
         {
-            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail, variant));
+            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail, variant, matView));
             _geom = data.Geometry;
             _lastData = data;
             ModelPreview.Populate(PreviewModels, data, Wireframe);
@@ -143,6 +146,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     partial void OnIsometricChanged(bool value) { Camera = MakeCamera(value); FrameCamera(); }
     partial void OnTexturedChanged(bool value) => _ = LoadAsync();
     partial void OnDetailChanged(ModelDetail value) => _ = LoadAsync();
+    partial void OnMaterialViewChanged(MaterialView value) => _ = LoadAsync();
 
     partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value);
 

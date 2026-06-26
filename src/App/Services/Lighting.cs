@@ -6,11 +6,16 @@ namespace ModelCodex.App.Services;
 
 public enum LightingStyle { Lookdev, Studio, Sun, Flat }
 
+/// <summary>How the preview shades a model. Shaded = lit render; the rest show a single material channel
+/// flat/unlit (Deimos-style lookdev channels). Metalness/Emission/Transmission are the gstack R/G/B.</summary>
+public enum MaterialView { Shaded, Albedo, Normal, Metalness, Emission, Transmission }
+
 /// <summary>Combo options. ToString returns Name so the closed ComboBox display shows it reliably.</summary>
 public sealed record LightingOption(LightingStyle Style, string Name) { public override string ToString() => Name; }
 public sealed record DetailOption(Tiger.Model.ModelDetail Detail, string Name) { public override string ToString() => Name; }
 public sealed record BgOption(Color Color, string Name) { public override string ToString() => Name; }
 public sealed record PermutationOption(int Index, string Name) { public override string ToString() => Name; }
+public sealed record MaterialViewOption(MaterialView View, string Name) { public override string ToString() => Name; }
 
 /// <summary>A fixed 4-light rig (1 ambient + 3 directional) for a lighting style.</summary>
 public readonly record struct LightRig(
