@@ -20,6 +20,8 @@ public static class ThumbnailService
     private static readonly SemaphoreSlim Gate = new(Math.Max(2, Environment.ProcessorCount / 2));
     private static readonly ConcurrentDictionary<uint, BitmapSource> ThumbCache = new();
     private static readonly ConcurrentDictionary<uint, TexSample?> TexCache = new();
+    /// <summary>tag -> has no decodable geometry (populated as thumbnails/scans parse).</summary>
+    public static readonly ConcurrentDictionary<uint, bool> EmptyCache = new();
 
     private static readonly (byte, byte, byte) Bg = (28, 30, 36);
     private static readonly (byte, byte, byte) Face = (170, 174, 182);
@@ -44,7 +46,9 @@ public static class ThumbnailService
                 try
                 {
                     var g = ModelParse.Parse(mgr, tile.Entry);
-                    if (g == null || g.VertexCount == 0) return (null, null, null);
+                    bool empty = g == null || g.VertexCount == 0;
+                    EmptyCache[tile.TagHash] = empty;
+                    if (empty) return (null, null, null);
                     var textures = ResolvePartTextures(mgr, g);
                     var src = ToBitmap(IsoThumbnail.Render(g, ThumbSize, Bg, Face,
                         IsoThumbnail.DefaultAzimuth, IsoThumbnail.DefaultElevation, textures));

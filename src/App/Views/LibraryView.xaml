@@ -52,6 +52,8 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding ResultCountText}"
                                Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center"/>
+                    <CheckBox DockPanel.Dock="Right" Content="Hide empty" IsChecked="{Binding HideEmpty}"
+                              Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0"/>
                     <TextBlock Text="{Binding SelectedPackage.Display, FallbackValue=''}" Foreground="{StaticResource TextC}"
                                FontSize="12" VerticalAlignment="Center"/>
                 </DockPanel>
@@ -145,8 +147,15 @@
                                   SelectedValuePath="Style" SelectedValue="{Binding Lighting}" FontSize="11" Margin="0,0,0,4"/>
                         <ComboBox Width="120" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
                                   SelectedValuePath="Detail" SelectedValue="{Binding Detail}" FontSize="11" Margin="0,0,0,4"/>
-                        <ComboBox Width="120" ItemsSource="{Binding BgOptions}" DisplayMemberPath="Name"
-                                  SelectedValuePath="Color" SelectedValue="{Binding PreviewBg}" FontSize="11"/>
+                        <Button Width="120" Height="24" Click="OnPickBg" HorizontalContentAlignment="Stretch" Padding="6,0">
+                            <DockPanel LastChildFill="False">
+                                <Border DockPanel.Dock="Left" Width="13" Height="13" BorderBrush="{StaticResource Outline2}"
+                                        BorderThickness="1" VerticalAlignment="Center">
+                                    <Border.Background><SolidColorBrush Color="{Binding PreviewBg}"/></Border.Background>
+                                </Border>
+                                <TextBlock Text="Background…" Margin="7,0,0,0" FontSize="11" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Button>
                     </StackPanel>
                 </Grid>
 

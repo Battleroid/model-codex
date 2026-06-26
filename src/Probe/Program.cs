@@ -497,6 +497,41 @@ else if (cmd == "entity")
         }
     }
 }
+else if (cmd == "dtex")
+{
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint th = Convert.ToUInt32(args[1], 16);
+    if (!mgr.ByTag.TryGetValue(th, out var te)) { Console.WriteLine("not a texture"); return; }
+    var dec = mgr.DecodeThumb(te, 400);
+    if (dec is not { } d) { Console.WriteLine("decode failed"); return; }
+    using var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(d.rgba, d.width, d.height);
+    string path = Path.Combine(OUT, $"dtex_{th:X8}.png");
+    img.SaveAsPng(path);
+    Console.WriteLine($"{th:X8} {d.width}x{d.height} -> {path}");
+}
+else if (cmd == "mattex")
+{
+    // Decode a material's textures to PNG + report average colour (find the colourful albedo).
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint mat = Convert.ToUInt32(args[1], 16);
+    foreach (var ch in Tiger.Model.MaterialMap.Channels(mgr, mat))
+    {
+        if (!mgr.ByTag.TryGetValue(ch.TexHash, out var te)) continue;
+        var dec = mgr.Decode(te);
+        if (dec is not { } d) { Console.WriteLine($"{ch.TagId} {ch.Width}x{ch.Height} {ch.Format} srgb={ch.Srgb} (decode failed)"); continue; }
+        long r = 0, g = 0, b = 0; int n = d.rgba.Length / 4;
+        for (int i = 0; i < d.rgba.Length; i += 4) { r += d.rgba[i]; g += d.rgba[i + 1]; b += d.rgba[i + 2]; }
+        // colourfulness = max channel diff
+        int ar = (int)(r / n), ag = (int)(g / n), ab = (int)(b / n);
+        int chroma = Math.Max(ar, Math.Max(ag, ab)) - Math.Min(ar, Math.Min(ag, ab));
+        using var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(d.rgba, d.width, d.height);
+        string path = Path.Combine(OUT, $"mattex_{ch.TagId}.png");
+        img.SaveAsPng(path);
+        Console.WriteLine($"{ch.TagId} {ch.Width}x{ch.Height} {ch.Format} srgb={ch.Srgb} avg=({ar},{ag},{ab}) chroma={chroma} -> {path}");
+    }
+}
 else if (cmd == "emesh")
 {
     // Parse an entity model end-to-end → OBJ. Validates EntityMesh.

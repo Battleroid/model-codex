@@ -48,9 +48,9 @@ public static class ModelPreview
         // Lit material. AmbientColor lets ambient light contribute; tiny emissive avoids pure-black faces.
         var mat = new PhongMaterial
         {
-            AmbientColor = new Color4(0.40f, 0.40f, 0.43f, 1f),
-            EmissiveColor = new Color4(0.03f, 0.03f, 0.04f, 1f),
-            SpecularColor = new Color4(0.10f, 0.10f, 0.11f, 1f),
+            AmbientColor = new Color4(0.85f, 0.85f, 0.88f, 1f), // pairs with the softer ambient light; keeps albedo true
+            EmissiveColor = new Color4(0.02f, 0.02f, 0.03f, 1f),
+            SpecularColor = new Color4(0.08f, 0.08f, 0.09f, 1f),
             SpecularShininess = 12f,
         };
         if (albedoPng != null) { mat.DiffuseColor = Color.White; mat.DiffuseMap = new TextureModel(new MemoryStream(albedoPng)); }

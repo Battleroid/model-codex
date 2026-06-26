@@ -34,9 +34,15 @@
                     <TextBlock Text="DETAIL" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox Width="110" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
                               SelectedValuePath="Detail" SelectedValue="{Binding Detail}" VerticalAlignment="Center" Margin="0,0,18,0"/>
-                    <TextBlock Text="BG" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <ComboBox Width="90" ItemsSource="{Binding BgOptions}" DisplayMemberPath="Name"
-                              SelectedValuePath="Color" SelectedValue="{Binding PreviewBg}" VerticalAlignment="Center" Margin="0,0,18,0"/>
+                    <Button Click="OnPickBg" VerticalAlignment="Center" Margin="0,0,18,0" Padding="8,4">
+                        <DockPanel LastChildFill="False">
+                            <Border DockPanel.Dock="Left" Width="12" Height="12" BorderBrush="{StaticResource Outline2}"
+                                    BorderThickness="1" VerticalAlignment="Center">
+                                <Border.Background><SolidColorBrush Color="{Binding PreviewBg}"/></Border.Background>
+                            </Border>
+                            <TextBlock Text="BG" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Button>
                     <TextBlock Text="FOV" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <Slider Width="120" Minimum="15" Maximum="100" VerticalAlignment="Center"
                             Value="{Binding Camera.FieldOfView, Mode=TwoWay}"

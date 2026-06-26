@@ -46,6 +46,7 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private ModelTile? _selectedTile;
     [ObservableProperty] private string _previewInfo = "";
     [ObservableProperty] private bool _textured = true;
+    [ObservableProperty] private bool _hideEmpty = true;
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
     [ObservableProperty] private MColor _previewBg = MColor.FromRgb(0x10, 0x10, 0x14);
@@ -179,8 +180,51 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         VisibleModels.Clear();
         if (_mgr == null || SelectedPackage is not { } pkg) { ResultCountText = ""; return; }
 
+        int total = 0, hidden = 0;
         foreach (var m in _all.Where(m => m.PkgId == pkg.PkgId).OrderBy(m => m.TagHash))
+        {
+            total++;
+            if (HideEmpty && ThumbnailService.EmptyCache.TryGetValue(m.TagHash, out bool e) && e) { hidden++; continue; }
             VisibleModels.Add(new ModelTile(m));
-        ResultCountText = $"{VisibleModels.Count} models";
+        }
+        ResultCountText = HideEmpty && hidden > 0 ? $"{VisibleModels.Count} models ({hidden} empty hidden)" : $"{VisibleModels.Count} models";
+        if (HideEmpty) _ = ScanEmptiesAsync(pkg.PkgId);
+    }
+
+    partial void OnHideEmptyChanged(bool value) => ApplyFilter();
+
+    /// <summary>Parse-check the current package's not-yet-known models off-thread and drop empties live.</summary>
+    private async Task ScanEmptiesAsync(ushort pkgId)
+    {
+        if (_mgr is not { } mgr) return;
+        var todo = _all.Where(m => m.PkgId == pkgId && !ThumbnailService.EmptyCache.ContainsKey(m.TagHash)).ToList();
+        if (todo.Count == 0) return;
+        var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
+        await Task.Run(() =>
+        {
+            int done = 0;
+            Parallel.ForEach(todo, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, m =>
+            {
+                bool empty;
+                try { var g = ModelParse.Parse(mgr, m); empty = g == null || g.VertexCount == 0; } catch { empty = true; }
+                ThumbnailService.EmptyCache[m.TagHash] = empty;
+                if (System.Threading.Interlocked.Increment(ref done) % 96 == 0)
+                    ui.InvokeAsync(DropKnownEmpties, System.Windows.Threading.DispatcherPriority.Background);
+            });
+        });
+        DropKnownEmpties();
+    }
+
+    private void DropKnownEmpties()
+    {
+        if (!HideEmpty) return;
+        for (int i = VisibleModels.Count - 1; i >= 0; i--)
+            if (ThumbnailService.EmptyCache.TryGetValue(VisibleModels[i].TagHash, out bool e) && e)
+                VisibleModels.RemoveAt(i);
+        if (SelectedPackage is { } p)
+        {
+            int total = _all.Count(m => m.PkgId == p.PkgId);
+            ResultCountText = $"{VisibleModels.Count} models ({total - VisibleModels.Count} empty hidden)";
+        }
     }
 }

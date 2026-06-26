@@ -54,6 +54,11 @@ public partial class LibraryView : UserControl
             vm.OpenRequested?.Invoke(m);
     }
 
+    private void OnPickBg(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is LibraryViewModel vm) vm.PreviewBg = BgPicker.Pick(vm.PreviewBg);
+    }
+
     // Right-click context menu on a tile (DataContext inherited from the tile).
     private void OnCtxOpen(object sender, RoutedEventArgs e)
     {
