@@ -43,7 +43,7 @@ public static class ModelPreview
         return new PreviewData(g, parts, channels, info);
     }
 
-    public static HxMaterial MakeMaterial(byte[]? albedoPng)
+    public static HxMaterial MakeMaterial(byte[]? albedoDds)
     {
         // Lit material. AmbientColor lets ambient light contribute; tiny emissive avoids pure-black faces.
         var mat = new PhongMaterial
@@ -53,7 +53,7 @@ public static class ModelPreview
             SpecularColor = new Color4(0.08f, 0.08f, 0.09f, 1f),
             SpecularShininess = 12f,
         };
-        if (albedoPng != null) { mat.DiffuseColor = Color.White; mat.DiffuseMap = new TextureModel(new MemoryStream(albedoPng)); }
+        if (albedoDds != null) { mat.DiffuseColor = Color.White; mat.DiffuseMap = new TextureModel(new MemoryStream(albedoDds), true); }
         else mat.DiffuseColor = new Color4(0.78f, 0.79f, 0.82f, 1f);
         return mat;
     }
@@ -65,7 +65,7 @@ public static class ModelPreview
             yield return new MeshGeometryModel3D
             {
                 Geometry = p.Geometry,
-                Material = MakeMaterial(p.AlbedoPng),
+                Material = MakeMaterial(p.AlbedoDds),
                 CullMode = SharpDX.Direct3D11.CullMode.Back,
                 RenderWireframe = wireframe,
                 WireframeColor = System.Windows.Media.Colors.Lime,

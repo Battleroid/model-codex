@@ -14,8 +14,9 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="240"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="430"/>
+            <ColumnDefinition Width="*" MinWidth="220"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="440" MinWidth="300"/>
         </Grid.ColumnDefinitions>
 
         <!-- Left: packages / categories with counts -->
@@ -125,8 +126,12 @@
             </Grid>
         </Grid>
 
+        <!-- Splitter to resize the preview panel -->
+        <GridSplitter Grid.Column="2" Width="5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      Background="{StaticResource Outline}" ResizeBehavior="PreviousAndNext" Cursor="SizeWE"/>
+
         <!-- Right: live 3D preview -->
-        <Border Grid.Column="2" Background="{StaticResource Inset2}" BorderBrush="{StaticResource Outline}"
+        <Border Grid.Column="3" Background="{StaticResource Inset2}" BorderBrush="{StaticResource Outline}"
                 BorderThickness="1,0,0,0">
             <Grid>
                 <Grid.RowDefinitions>

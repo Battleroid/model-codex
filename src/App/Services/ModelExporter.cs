@@ -67,7 +67,10 @@ public static class ModelExporter
                 if (!pngCache.TryGetValue(th, out var png))
                 {
                     png = null;
-                    try { if (mgr.ByTag.TryGetValue(th, out var te) && mgr.Decode(te) is { } d) png = EncodePng(d.rgba, d.width, d.height); }
+                    // Prefer the highest mip that decodes; large top mips often live in a separately-streamed
+                    // buffer that fails to resolve, so chain down to a smaller (reliable) mip rather than lose
+                    // the texture entirely.
+                    try { if (mgr.ByTag.TryGetValue(th, out var te) && (mgr.DecodeThumb(te, 2048) ?? mgr.DecodeThumb(te, 512) ?? mgr.DecodeThumb(te, 128) ?? mgr.Decode(te)) is { } d) png = EncodePng(d.rgba, d.width, d.height); }
                     catch { }
                     pngCache[th] = png;
                 }

@@ -497,6 +497,34 @@ else if (cmd == "entity")
         }
     }
 }
+else if (cmd == "pmat")
+{
+    // Dump a material's Pixel-shader texture table (the proper albedo = slot 0), MIDA-style.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint mat = Convert.ToUInt32(args[1], 16);
+    byte[]? d = mgr.ReadTag(mat);
+    if (d == null) { Console.WriteLine("no material"); return; }
+    foreach (var (label, baseOff) in new[] { ("Pixel", 0x278), ("Vertex", 0x58) })
+    {
+        int f = baseOff + 0x8; // Textures DynamicArray
+        if (f + 16 > d.Length) continue;
+        long tc = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+        long trel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+        int toff = f + 0x18 + (int)trel;
+        Console.WriteLine($"{label}.Textures count={tc} dataOff=0x{toff:X}");
+        for (int k = 0; k < Math.Min(tc, 12) && toff + k * 0x18 + 0x10 <= d.Length; k++)
+        {
+            int e = toff + k * 0x18;
+            uint idx = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(e));
+            ulong t64 = BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan(e + 8));
+            uint th = mgr.TryResolveHash64(t64, out uint h) ? h : 0;
+            string fmt = "?"; bool srgb = false;
+            if (th != 0 && mgr.ByTag.TryGetValue(th, out var te)) { try { var hd = mgr.LoadHeader(te); fmt = $"{hd.Width}x{hd.Height} {hd.FormatName}"; srgb = Tiger.TigerTexture.IsSrgb(hd.DxgiFormat); } catch { } }
+            Console.WriteLine($"  slot={idx} tag64={t64:X16} tex={th:X8} {fmt} srgb={srgb}");
+        }
+    }
+}
 else if (cmd == "dtex")
 {
     var mgr = new PackageManager(PKG_DIR, OODLE);

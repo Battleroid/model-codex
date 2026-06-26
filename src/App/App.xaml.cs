@@ -52,7 +52,7 @@ public partial class App : Application
                 await Task.Delay(400);
                 vm.Library.SelectedTile = vm.Library.VisibleModels.FirstOrDefault(t => t.TagHash == hash);
             }
-            await Task.Delay(2500); // let the viewport parse + render
+            await Task.Delay(3000); // let the viewport parse + upload textures + render
 
             int w = (int)win.ActualWidth, h = (int)win.ActualHeight;
             var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(w, h, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);

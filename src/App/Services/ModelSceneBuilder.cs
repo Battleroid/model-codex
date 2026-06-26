@@ -13,8 +13,8 @@ namespace ModelCodex.App.Services;
 public sealed class PartRender
 {
     public MeshGeometry3D Geometry { get; init; } = null!;
-    /// <summary>Albedo texture encoded as PNG, or null for an untextured part.</summary>
-    public byte[]? AlbedoPng { get; init; }
+    /// <summary>Albedo texture as a DDS blob, or null for an untextured part.</summary>
+    public byte[]? AlbedoDds { get; init; }
 }
 
 /// <summary>Converts decoded <see cref="Tiger.Model.ModelGeometry"/> into HelixToolkit mesh data,
@@ -41,14 +41,28 @@ public static class ModelSceneBuilder
     public static List<PartRender> BuildParts(TModel geom, PackageManager mgr, bool textured, uint? overrideAlbedo = null)
     {
         var result = new List<PartRender>();
-        var pngCache = new Dictionary<uint, byte[]?>();
-        byte[]? Png(uint texHash)
+        var texCache = new Dictionary<uint, byte[]?>();
+        // Decode the albedo, force it OPAQUE (the diffuse-map alpha is a mask, not transparency — leaving
+        // it makes HelixToolkit render coloured regions see-through, so the model looks washed/gray), then
+        // PNG-encode. This mirrors MIDA's RemoveAlpha step.
+        byte[]? Tex(uint texHash)
         {
-            if (pngCache.TryGetValue(texHash, out var cached)) return cached;
+            if (texCache.TryGetValue(texHash, out var cached)) return cached;
             byte[]? png = null;
-            try { if (mgr.ByTag.TryGetValue(texHash, out var te) && mgr.Decode(te) is { } d) png = EncodePng(d.rgba, d.width, d.height); }
+            try
+            {
+                // The large mips live in a separately-streamed buffer that often fails to resolve; only the
+                // small inline mips decode reliably (that's why the CPU thumbnail works but the preview was
+                // gray). Chain down to a mip that actually decodes.
+                if (mgr.ByTag.TryGetValue(texHash, out var te) &&
+                    (mgr.DecodeThumb(te, 512) ?? mgr.DecodeThumb(te, 128) ?? mgr.Decode(te)) is { } d)
+                {
+                    for (int i = 3; i < d.rgba.Length; i += 4) d.rgba[i] = 255;
+                    png = EncodePng(d.rgba, d.width, d.height);
+                }
+            }
             catch { }
-            pngCache[texHash] = png;
+            texCache[texHash] = png;
             return png;
         }
 
@@ -61,12 +75,12 @@ public static class ModelSceneBuilder
             int baseV = 0;
             AppendPart(part, positions, indices, normals, texcoords, ref baseV);
 
-            byte[]? png = null;
-            if (overrideAlbedo is uint forced) png = Png(forced);
+            byte[]? tex = null;
+            if (overrideAlbedo is uint forced) tex = Tex(forced);
             else if (textured && part.MaterialHash != 0 && MaterialMap.Albedo(mgr, part.MaterialHash) is uint texHash)
-                png = Png(texHash);
+                tex = Tex(texHash);
 
-            result.Add(new PartRender { Geometry = Finish(positions, indices, normals, texcoords), AlbedoPng = png });
+            result.Add(new PartRender { Geometry = Finish(positions, indices, normals, texcoords), AlbedoDds = tex });
         }
         return result;
     }
