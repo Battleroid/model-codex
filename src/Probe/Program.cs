@@ -563,6 +563,33 @@ else if (cmd == "dtex")
     img.SaveAsPng(path);
     Console.WriteLine($"{th:X8} {d.width}x{d.height} -> {path}");
 }
+else if (cmd == "ithumb")
+{
+    // Render a specific model's grid thumbnail (same CPU path as ThumbnailService) to verify UV/texture.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint h = Convert.ToUInt32(args[1], 16);
+    var parsed = Tiger.Model.ModelParse.Parse(mgr, mgr.ModelByTag[h]);
+    if (parsed == null) { Console.WriteLine("no geometry"); return; }
+    var g = parsed.WithVariant(parsed.DefaultVariant);
+    var tex = new List<TexSample?>(); TexSample? primary = null;
+    foreach (var part in g.Parts)
+    {
+        TexSample? s = null;
+        if (part.MaterialHash != 0 && Tiger.Model.MaterialMap.Albedo(mgr, part.MaterialHash) is uint th
+            && mgr.ByTag.TryGetValue(th, out var te) && mgr.DecodeThumb(te, 128) is { } d)
+            s = new TexSample(d.rgba, d.width, d.height);
+        primary ??= s; tex.Add(s);
+    }
+    if (primary != null) for (int i = 0; i < tex.Count; i++) tex[i] ??= primary;
+    int sz = 256;
+    byte[] rgba = Tiger.Model.IsoThumbnail.Render(g, sz, (28, 30, 36), (170, 174, 182),
+        Tiger.Model.IsoThumbnail.DefaultAzimuth, Tiger.Model.IsoThumbnail.DefaultElevation, tex);
+    using var img = SixLabors.ImageSharp.Image.LoadPixelData<SixLabors.ImageSharp.PixelFormats.Rgba32>(rgba, sz, sz);
+    string path = Path.Combine(OUT, $"ithumb_{h:X8}.png");
+    img.SaveAsPng(path);
+    Console.WriteLine($"{h:X8}: {g.Parts.Count} parts -> {path}");
+}
 else if (cmd == "decstep")
 {
     var mgr = new PackageManager(PKG_DIR, OODLE);

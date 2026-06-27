@@ -115,7 +115,9 @@ public static class IsoThumbnail
             {
                 float u = l0 * ua.X + l1 * ub.X + l2 * uc.X;
                 float v = l0 * ua.Y + l1 * ub.Y + l2 * uc.Y;
-                var (cr, cg, cbl) = ts.At(u, v);
+                // Parser texcoords use the export/glTF V convention; flip V so the CPU thumbnail samples
+                // the same way the HelixToolkit preview does (see ModelSceneBuilder.AppendPart).
+                var (cr, cg, cbl) = ts.At(u, 1f - v);
                 br = cr; bg2 = cg; bb = cbl;
             }
             else { br = face.r; bg2 = face.g; bb = face.b; }
