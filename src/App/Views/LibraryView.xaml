@@ -52,6 +52,24 @@
             <Border Grid.Row="0" Background="{StaticResource Panel}" BorderBrush="{StaticResource Outline}"
                     BorderThickness="0,0,0,1" Padding="12,8">
                 <DockPanel>
+                    <Grid DockPanel.Dock="Left" Width="180" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=120}"
+                                 FontSize="11" VerticalContentAlignment="Center" Padding="4,2"
+                                 ToolTip="Search a hash id across all packages (e.g. 80A68142)"/>
+                        <TextBlock Text="search hash id…" Foreground="{StaticResource TextFaint}" FontSize="11"
+                                   Margin="6,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SearchText}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
                     <TextBlock DockPanel.Dock="Right" Text="{Binding ResultCountText}"
                                Foreground="{StaticResource TextDim}" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0"/>
                     <CheckBox DockPanel.Dock="Right" Content="Hide empty" IsChecked="{Binding HideEmpty}"

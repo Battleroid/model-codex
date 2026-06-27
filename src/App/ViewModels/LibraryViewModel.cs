@@ -30,6 +30,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private PackageGroup? _selectedPackage;
     [ObservableProperty] private string _resultCountText = "";
     [ObservableProperty] private string _emptyMessage = "Load models to begin.";
+    /// <summary>Hash-id search; when non-empty the grid matches across ALL packages instead of the selected one.</summary>
+    [ObservableProperty] private string _searchText = "";
 
     // ---- Right-panel live preview ----
     public EffectsManager EffectsManager { get; } = new DefaultEffectsManager();
@@ -197,7 +199,13 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         ApplyFilter();
     }
 
-    partial void OnSelectedPackageChanged(PackageGroup? value) => ApplyFilter();
+    partial void OnSelectedPackageChanged(PackageGroup? value)
+    {
+        // Picking a package exits an active search (clearing SearchText re-applies the filter for the package).
+        if (!string.IsNullOrEmpty(SearchText)) { SearchText = ""; return; }
+        ApplyFilter();
+    }
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
 
     [ObservableProperty] private MaterialChannel? _selectedChannel;
     [ObservableProperty] private int _selectedPermutation = -1;
@@ -286,20 +294,43 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         }
     }
 
+    private const int SearchCap = 2000;
+
     private void ApplyFilter()
     {
         VisibleModels.Clear();
-        if (_mgr == null || SelectedPackage is not { } pkg) { ResultCountText = ""; return; }
+        if (_mgr == null) { ResultCountText = ""; return; }
 
-        int total = 0, hidden = 0;
-        foreach (var m in _all.Where(m => m.PkgId == pkg.PkgId).OrderBy(m => m.TagHash))
+        // A hash query (e.g. "80A6", "0x80A68142") searches every package; otherwise show the selected one.
+        string q = (SearchText ?? "").Trim();
+        if (q.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) q = q[2..];
+        bool searching = q.Length > 0;
+
+        IEnumerable<ModelEntry> source;
+        if (searching)
+            source = _all.Where(m => m.TagId.Contains(q, StringComparison.OrdinalIgnoreCase));
+        else if (SelectedPackage is { } pkg)
+            source = _all.Where(m => m.PkgId == pkg.PkgId);
+        else { ResultCountText = ""; return; }
+
+        int hidden = 0, capped = 0;
+        foreach (var m in source.OrderBy(m => m.TagHash))
         {
-            total++;
             if (HideEmpty && ThumbnailService.EmptyCache.TryGetValue(m.TagHash, out bool e) && e) { hidden++; continue; }
+            if (VisibleModels.Count >= SearchCap) { capped++; continue; }
             VisibleModels.Add(new ModelTile(m));
         }
-        ResultCountText = HideEmpty && hidden > 0 ? $"{VisibleModels.Count} models ({hidden} empty hidden)" : $"{VisibleModels.Count} models";
-        if (HideEmpty) _ = ScanEmptiesAsync(pkg.PkgId);
+
+        string hiddenNote = hidden > 0 ? $" ({hidden} empty hidden)" : "";
+        if (searching)
+            ResultCountText = capped > 0
+                ? $"showing {VisibleModels.Count} of {VisibleModels.Count + capped}+ for \"{q}\"{hiddenNote}"
+                : $"{VisibleModels.Count} match{(VisibleModels.Count == 1 ? "" : "es")} for \"{q}\"{hiddenNote}";
+        else
+            ResultCountText = $"{VisibleModels.Count} models{hiddenNote}";
+
+        // The empty-scan is per-package; skip it during a cross-package search (would scan the whole catalogue).
+        if (!searching && HideEmpty && SelectedPackage is { } p2) _ = ScanEmptiesAsync(p2.PkgId);
     }
 
     partial void OnHideEmptyChanged(bool value) => ApplyFilter();
