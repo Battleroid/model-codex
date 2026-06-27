@@ -176,40 +176,47 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid Grid.Row="0" Margin="12,10">
-                    <StackPanel>
-                        <TextBlock Text="{Binding SelectedModel.TagId, FallbackValue='—'}" Style="{StaticResource Display}" FontSize="22"/>
-                        <TextBlock Text="{Binding SelectedModel.Category}" Foreground="{StaticResource Accent}" FontSize="11"/>
-                    </StackPanel>
-                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top">
-                        <CheckBox Content="Textured" IsChecked="{Binding Textured}" Foreground="{StaticResource TextDim}"
-                                  FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,4"/>
-                        <CheckBox Content="Flat shading" IsChecked="{Binding FlatShading}" Foreground="{StaticResource TextDim}"
-                                  FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,4"/>
-                        <ComboBox Width="120" ItemsSource="{Binding LightingStyles}" DisplayMemberPath="Name"
-                                  SelectedValuePath="Style" SelectedValue="{Binding Lighting}" FontSize="11" Margin="0,0,0,4"/>
-                        <ComboBox Width="120" ItemsSource="{Binding MaterialViews}" DisplayMemberPath="Name"
-                                  SelectedValuePath="View" SelectedValue="{Binding MaterialView}" FontSize="11" Margin="0,0,0,4"/>
-                        <ComboBox Width="120" ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
-                                  SelectedValuePath="Detail" SelectedValue="{Binding Detail}" FontSize="11" Margin="0,0,0,4"/>
-                        <ComboBox Width="120" ItemsSource="{Binding Permutations}" DisplayMemberPath="Name"
-                                  SelectedValuePath="Index" SelectedValue="{Binding SelectedPermutation}" FontSize="11" Margin="0,0,0,4"
+                <StackPanel Grid.Row="0" Margin="12,10,12,6">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left">
+                            <TextBlock Text="{Binding SelectedModel.TagId, FallbackValue='—'}" Style="{StaticResource Display}" FontSize="22"/>
+                            <TextBlock Text="{Binding SelectedModel.Category}" Foreground="{StaticResource Accent}" FontSize="11"/>
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top">
+                            <CheckBox Content="Textured" IsChecked="{Binding Textured}" Foreground="{StaticResource TextDim}"
+                                      FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                            <CheckBox Content="Flat shading" IsChecked="{Binding FlatShading}" Foreground="{StaticResource TextDim}"
+                                      FontSize="11" HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <WrapPanel Margin="0,8,0,0">
+                        <WrapPanel.Resources>
+                            <Style TargetType="ComboBox"><Setter Property="Width" Value="98"/><Setter Property="FontSize" Value="11"/><Setter Property="Margin" Value="0,0,4,4"/></Style>
+                        </WrapPanel.Resources>
+                        <ComboBox ItemsSource="{Binding LightingStyles}" DisplayMemberPath="Name"
+                                  SelectedValuePath="Style" SelectedValue="{Binding Lighting}"/>
+                        <ComboBox ItemsSource="{Binding MaterialViews}" DisplayMemberPath="Name"
+                                  SelectedValuePath="View" SelectedValue="{Binding MaterialView}"/>
+                        <ComboBox ItemsSource="{Binding DetailLevels}" DisplayMemberPath="Name"
+                                  SelectedValuePath="Detail" SelectedValue="{Binding Detail}"/>
+                        <ComboBox ItemsSource="{Binding Permutations}" DisplayMemberPath="Name"
+                                  SelectedValuePath="Index" SelectedValue="{Binding SelectedPermutation}"
                                   Visibility="{Binding HasPermutations, Converter={StaticResource BoolVis}}"/>
-                        <Button Width="120" Height="24" Click="OnPickBg" HorizontalContentAlignment="Stretch" Padding="6,0">
+                        <Button Height="24" Click="OnPickBg" Padding="6,0" Margin="0,0,4,4" ToolTip="Background colour">
                             <DockPanel LastChildFill="False">
                                 <Border DockPanel.Dock="Left" Width="13" Height="13" BorderBrush="{StaticResource Outline2}"
                                         BorderThickness="1" VerticalAlignment="Center">
                                     <Border.Background><SolidColorBrush Color="{Binding PreviewBg}"/></Border.Background>
                                 </Border>
-                                <TextBlock Text="Background…" Margin="7,0,0,0" FontSize="11" VerticalAlignment="Center"/>
+                                <TextBlock Text="BG" Margin="6,0,0,0" FontSize="11" VerticalAlignment="Center"/>
                             </DockPanel>
                         </Button>
-                        <DockPanel Width="120" Margin="0,6,0,0">
+                        <DockPanel Width="120" Margin="0,0,0,4" VerticalAlignment="Center">
                             <TextBlock DockPanel.Dock="Left" Text="Exp" Foreground="{StaticResource TextDim}" FontSize="10" VerticalAlignment="Center"/>
                             <Slider Minimum="0.3" Maximum="2.5" Value="{Binding Exposure}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                         </DockPanel>
-                    </StackPanel>
-                </Grid>
+                    </WrapPanel>
+                </StackPanel>
 
                 <Border Grid.Row="1" Margin="8,0,8,8" Background="{StaticResource Inset}">
                     <hx:Viewport3DX Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
