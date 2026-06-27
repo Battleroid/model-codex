@@ -26,10 +26,44 @@ public static class IsoThumbnail
     public const float DefaultAzimuth = 0.785398f;   // 45°
     public const float DefaultElevation = 0.5235988f; // 30°
 
+    /// <summary>Render at <paramref name="size"/>, anti-aliased by supersampling: rasterize at
+    /// size×<paramref name="supersample"/> then box-downsample. ss=1 disables AA.</summary>
     public static byte[] Render(ModelGeometry geom, int size,
         (byte r, byte g, byte b) bg, (byte r, byte g, byte b) face,
         float azimuth = DefaultAzimuth, float elevation = DefaultElevation,
-        IReadOnlyList<TexSample?>? partTextures = null)
+        IReadOnlyList<TexSample?>? partTextures = null, int supersample = 2)
+    {
+        int ss = Math.Clamp(supersample, 1, 4);
+        if (ss == 1) return RenderCore(geom, size, bg, face, azimuth, elevation, partTextures);
+        int hi = size * ss;
+        byte[] big = RenderCore(geom, hi, bg, face, azimuth, elevation, partTextures);
+        return Downsample(big, hi, size, ss);
+    }
+
+    private static byte[] Downsample(byte[] src, int srcSize, int dstSize, int ss)
+    {
+        var dst = new byte[dstSize * dstSize * 4];
+        int n = ss * ss;
+        for (int y = 0; y < dstSize; y++)
+        for (int x = 0; x < dstSize; x++)
+        {
+            int r = 0, g = 0, b = 0, a = 0;
+            for (int dy = 0; dy < ss; dy++)
+            for (int dx = 0; dx < ss; dx++)
+            {
+                int si = (((y * ss) + dy) * srcSize + (x * ss + dx)) * 4;
+                r += src[si]; g += src[si + 1]; b += src[si + 2]; a += src[si + 3];
+            }
+            int di = (y * dstSize + x) * 4;
+            dst[di] = (byte)(r / n); dst[di + 1] = (byte)(g / n); dst[di + 2] = (byte)(b / n); dst[di + 3] = (byte)(a / n);
+        }
+        return dst;
+    }
+
+    private static byte[] RenderCore(ModelGeometry geom, int size,
+        (byte r, byte g, byte b) bg, (byte r, byte g, byte b) face,
+        float azimuth, float elevation,
+        IReadOnlyList<TexSample?>? partTextures)
     {
         var img = new byte[size * size * 4];
         for (int i = 0; i < size * size; i++)

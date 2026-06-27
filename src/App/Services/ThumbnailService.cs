@@ -179,7 +179,7 @@ public static class ThumbnailService
         if (_spinTimer == null)
         {
             _spinTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
-            { Interval = TimeSpan.FromMilliseconds(90) };
+            { Interval = TimeSpan.FromMilliseconds(45) };
             _spinTimer.Tick += (_, _) => SpinTick();
         }
         if (!_spinTimer.IsEnabled) _spinTimer.Start();
@@ -189,7 +189,7 @@ public static class ThumbnailService
     {
         ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
         if (tiles.Length == 0) { _spinTimer?.Stop(); return; }
-        const float step = 0.05f; // radians per tick → a full slow revolution every ~14s
+        const float step = 0.025f; // radians per tick; ~45ms ticks → smooth, ~full revolution every ~11s
         foreach (var tile in tiles)
         {
             var geom = tile.Geometry;
