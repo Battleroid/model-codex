@@ -15,6 +15,37 @@ public sealed record MaterialChannel(uint TexHash, int Width, int Height, string
 /// </summary>
 public static class MaterialMap
 {
+    // SMaterial (class 0x808031D8): pixel shader sub-struct @ 0x278; its Textures DynamicArray @ +0x8.
+    // STextureTag (0x18 bytes): TextureIndex u32 @ 0x0; same-package Texture u32 @ 0x8 (0xFFFFFFFF when
+    // unbound); cross-package Texture Tag64 @ 0x10. Register order == binding order; slot 0 is the albedo.
+    private const int MAT_PixelShader = 0x278;
+
+    /// <summary>The pixel shader's bound textures in register order: (TextureIndex, textureHash). This is
+    /// the authoritative texture set — slot 0 is albedo, slot 1 normal, etc. Empty if none are bound.</summary>
+    public static List<(int index, uint tex)> PixelTextures(PackageManager mgr, uint materialHash)
+    {
+        var list = new List<(int, uint)>();
+        byte[]? d = mgr.ReadTag(materialHash);
+        int f = MAT_PixelShader + 0x8;
+        if (d == null || f + 0x18 > d.Length) return list;
+        long count = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+        long rel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+        int off = f + 0x18 + (int)rel;
+        if (count is < 0 or > 64) return list;
+        for (int k = 0; k < count; k++)
+        {
+            int e = off + k * 0x18;
+            if (e + 0x18 > d.Length) break;
+            int idx = (int)BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(e));
+            uint tex32 = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(e + 0x8));
+            uint tex = mgr.ByTag.ContainsKey(tex32) ? tex32
+                : mgr.TryResolveHash64(BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan(e + 0x10)), out uint h32)
+                  && mgr.ByTag.ContainsKey(h32) ? h32 : 0;
+            if (tex != 0) list.Add((idx, tex));
+        }
+        return list;
+    }
+
     /// <summary>Distinct texture taghashes this material references, in file order.</summary>
     public static List<uint> TextureRefs(PackageManager mgr, uint materialHash)
     {
@@ -51,11 +82,21 @@ public static class MaterialMap
         return list;
     }
 
-    /// <summary>Pick the albedo/diffuse texture: the first sRGB (colour) texture in material order;
-    /// else the largest sRGB; else the first texture. Marathon materials are dye/channel-packed, so the
-    /// first sRGB slot is the closest thing to a base colour.</summary>
+    /// <summary>The pixel-shader texture bound at a given register slot (0 = albedo, 1 = normal, …).</summary>
+    public static uint? SlotTexture(PackageManager mgr, uint materialHash, int slot)
+    {
+        var px = PixelTextures(mgr, materialHash);
+        foreach (var (idx, tex) in px) if (idx == slot) return tex;
+        return slot < px.Count ? px[slot].tex : (uint?)null;
+    }
+
+    /// <summary>Pick the albedo/diffuse texture. The authoritative source is the pixel shader's register 0
+    /// (how the engine binds albedo); fall back to a byte-scan heuristic (first usable sRGB, skipping tiny
+    /// dummies) only when the material has no bound pixel textures.</summary>
     public static uint? Albedo(PackageManager mgr, uint materialHash)
     {
+        if (SlotTexture(mgr, materialHash, 0) is uint slot0) return slot0;
+
         var refs = TextureRefs(mgr, materialHash);
         uint firstSrgb = 0, largestSrgb = 0, first = 0; long largestArea = -1;
         foreach (uint t in refs)
@@ -65,6 +106,7 @@ public static class MaterialMap
             try
             {
                 var h = mgr.LoadHeader(te);
+                if (h.Width <= 8 || h.Height <= 8) continue; // skip dummy/detail
                 if (TigerTexture.IsSrgb(h.DxgiFormat))
                 {
                     if (firstSrgb == 0) firstSrgb = t;
@@ -101,9 +143,13 @@ public static class MaterialMap
         return best == 0 ? null : best;
     }
 
-    /// <summary>The material's tangent-space normal map, if present (largest one detected).</summary>
+    /// <summary>The material's tangent-space normal map. Pixel register 1 is the engine's normal slot;
+    /// fall back to detecting a flat-blue map among the references.</summary>
     public static uint? Normal(PackageManager mgr, uint materialHash)
     {
+        if (SlotTexture(mgr, materialHash, 1) is uint slot1 && mgr.ByTag.TryGetValue(slot1, out var s1)
+            && IsNormalMap(mgr, s1)) return slot1;
+
         uint best = 0; long bestArea = 0;
         foreach (uint t in TextureRefs(mgr, materialHash))
         {

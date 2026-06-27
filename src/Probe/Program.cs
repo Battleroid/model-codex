@@ -540,10 +540,13 @@ else if (cmd == "pmat")
             int e = toff + k * 0x18;
             uint idx = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(e));
             ulong t64 = BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan(e + 8));
+            ulong t64b = BinaryPrimitives.ReadUInt64LittleEndian(d.AsSpan(e + 0x10));
             uint th = mgr.TryResolveHash64(t64, out uint h) ? h : 0;
+            uint thb = mgr.TryResolveHash64(t64b, out uint hb) ? hb : 0;
             string fmt = "?"; bool srgb = false;
-            if (th != 0 && mgr.ByTag.TryGetValue(th, out var te)) { try { var hd = mgr.LoadHeader(te); fmt = $"{hd.Width}x{hd.Height} {hd.FormatName}"; srgb = Tiger.TigerTexture.IsSrgb(hd.DxgiFormat); } catch { } }
-            Console.WriteLine($"  slot={idx} tag64={t64:X16} tex={th:X8} {fmt} srgb={srgb}");
+            uint show = th != 0 ? th : thb;
+            if (show != 0 && mgr.ByTag.TryGetValue(show, out var te)) { try { var hd = mgr.LoadHeader(te); fmt = $"{hd.Width}x{hd.Height} {hd.FormatName}"; srgb = Tiger.TigerTexture.IsSrgb(hd.DxgiFormat); } catch { } }
+            Console.WriteLine($"  slot={idx} tex@0x8={th:X8} tex@0x10={thb:X8} {fmt} srgb={srgb}");
         }
     }
 }
@@ -559,6 +562,33 @@ else if (cmd == "dtex")
     string path = Path.Combine(OUT, $"dtex_{th:X8}.png");
     img.SaveAsPng(path);
     Console.WriteLine($"{th:X8} {d.width}x{d.height} -> {path}");
+}
+else if (cmd == "decstep")
+{
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint th = Convert.ToUInt32(args[1], 16);
+    if (!mgr.ByTag.TryGetValue(th, out var te)) { Console.WriteLine("not a texture"); return; }
+    foreach (int t in new[] { 2048, 1024, 512, 256, 128, 64 })
+    {
+        var d = mgr.DecodeThumb(te, t);
+        if (d is not { } dd) { Console.WriteLine($"  target {t}: NULL"); continue; }
+        int n = dd.rgba.Length / 4; long r = 0, g = 0, b = 0; int dark = 0;
+        for (int i = 0; i < dd.rgba.Length; i += 4) { r += dd.rgba[i]; g += dd.rgba[i + 1]; b += dd.rgba[i + 2]; if (dd.rgba[i] + dd.rgba[i + 1] + dd.rgba[i + 2] < 24) dark++; }
+        Console.WriteLine($"  target {t}: {dd.width}x{dd.height} avg=({r / n},{g / n},{b / n}) dark={100.0 * dark / n:F0}%");
+    }
+}
+else if (cmd == "albedo")
+{
+    // Exercise the real MaterialMap selection path (same lib the app uses).
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint mat = Convert.ToUInt32(args[1], 16);
+    var px = Tiger.Model.MaterialMap.PixelTextures(mgr, mat);
+    Console.WriteLine($"PixelTextures: {string.Join(", ", px.Select(p => $"[{p.index}]{p.tex:X8}"))}");
+    Console.WriteLine($"Albedo = {Tiger.Model.MaterialMap.Albedo(mgr, mat):X8}");
+    Console.WriteLine($"Normal = {Tiger.Model.MaterialMap.Normal(mgr, mat):X8}");
+    Console.WriteLine($"Gstack = {Tiger.Model.MaterialMap.Gstack(mgr, mat):X8}");
 }
 else if (cmd == "uvscan")
 {

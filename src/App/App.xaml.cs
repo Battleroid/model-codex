@@ -107,6 +107,20 @@ public partial class App : Application
                     break;
                 }
 
+                case "--albedotest": // --albedotest <hashHex> — run the real preview pipeline, report per-part albedo
+                {
+                    var mgr = AppState.Instance.BuildIndex();
+                    uint hash = Convert.ToUInt32(args[1], 16);
+                    var entry = mgr.ModelByTag.TryGetValue(hash, out var me) ? me : throw new Exception("not a model");
+                    var data = ModelPreview.Load(mgr, entry, true);
+                    var sb = new System.Text.StringBuilder($"variants={string.Join(",", data.Variants)} sel={data.SelectedVariant} parts={data.Parts.Count}\n");
+                    if (data.Geometry is { } g)
+                        for (int i = 0; i < data.Parts.Count; i++)
+                            sb.AppendLine($"part{i} mat={g.PartsForVariant(data.SelectedVariant).ElementAtOrDefault(i)?.MaterialHash:X8} albedoLen={data.Parts[i].AlbedoDds?.Length ?? -1} emisLen={data.Parts[i].EmissiveDds?.Length ?? -1}");
+                    File.WriteAllText(log, sb.ToString());
+                    break;
+                }
+
                 case "--export": // --export <hashHex> <outDir> <format>
                 {
                     var mgr = AppState.Instance.BuildIndex();

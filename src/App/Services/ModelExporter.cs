@@ -59,6 +59,7 @@ public static class ModelExporter
     {
         var cache = new Dictionary<uint, (byte[]?, byte[]?)>();
         var list = new List<PartData>();
+        byte[]? primaryAlbedo = null, primaryEmissive = null; uint primaryMat = 0;
         // Export a single permutation (the default) so variant geometry doesn't overlap in the output.
         foreach (var part in geom.PartsForVariant(geom.DefaultVariant))
         {
@@ -70,9 +71,14 @@ public static class ModelExporter
                 pd.MatHash = part.MaterialHash;
                 pd.AlbedoPng = albedo;
                 pd.EmissivePng = emissive;
+                if (primaryAlbedo == null && albedo != null) { primaryAlbedo = albedo; primaryEmissive = emissive; primaryMat = part.MaterialHash; }
             }
             list.Add(pd);
         }
+        // Textureless stub-material parts fall back to the model's primary albedo (matches the preview).
+        if (textures && primaryAlbedo != null)
+            foreach (var pd in list)
+                if (pd.AlbedoPng == null) { pd.AlbedoPng = primaryAlbedo; pd.EmissivePng = primaryEmissive; pd.MatHash = primaryMat; }
         return list;
     }
 

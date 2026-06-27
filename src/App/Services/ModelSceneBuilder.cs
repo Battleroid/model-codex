@@ -51,9 +51,23 @@ public static class ModelSceneBuilder
         var mapCache = new Dictionary<uint, (byte[]? albedo, byte[]? emissive)>();
         var channelCache = new Dictionary<uint, byte[]?>();
         bool unlit = view != MaterialView.Shaded;
+        bool shadedTextured = !unlit && overrideAlbedo == null && textured;
 
-        foreach (var part in geom.Parts)
+        // Pre-resolve each part's maps so textureless stub-material parts (common: a model's body has the
+        // real atlas, secondary parts have empty materials) can fall back to the model's primary albedo —
+        // otherwise those parts render gray. Match Deimos, which textures the whole model.
+        var partMaps = new (byte[]? a, byte[]? e)[geom.Parts.Count];
+        byte[]? primaryAlbedo = null, primaryEmissive = null;
+        if (shadedTextured)
+            for (int i = 0; i < geom.Parts.Count; i++)
+            {
+                if (geom.Parts[i].MaterialHash != 0) partMaps[i] = Maps(mgr, geom.Parts[i].MaterialHash, mapCache);
+                if (primaryAlbedo == null && partMaps[i].a != null) { primaryAlbedo = partMaps[i].a; primaryEmissive = partMaps[i].e; }
+            }
+
+        for (int pi = 0; pi < geom.Parts.Count; pi++)
         {
+            var part = geom.Parts[pi];
             var positions = new Vector3Collection();
             var indices = new IntCollection();
             var normals = new Vector3Collection();
@@ -70,9 +84,10 @@ public static class ModelSceneBuilder
             {
                 albedo = AlbedoPng(mgr, forced, texCache);
             }
-            else if (textured && part.MaterialHash != 0)
+            else if (shadedTextured)
             {
-                (albedo, emissive) = Maps(mgr, part.MaterialHash, mapCache);
+                (albedo, emissive) = partMaps[pi];
+                if (albedo == null) { albedo = primaryAlbedo; emissive = primaryEmissive; } // stub material
             }
 
             result.Add(new PartRender
@@ -183,14 +198,29 @@ public static class ModelSceneBuilder
         return (albedoPng, emissivePng);
     }
 
-    /// <summary>Decode a texture, preferring the mips that actually resolve. Large top mips often live in a
-    /// separately-streamed buffer that fails, so try the smaller inline mips first (the known-good order),
-    /// falling back to the full decode last.</summary>
+    /// <summary>Decode a texture at the best resolution that actually has pixel data. Large top mips often
+    /// live in a separately-streamed buffer that's absent — and crucially the decoder returns a non-null
+    /// ALL-BLACK image for those, not null — so a naive fallback chain would stop on the empty top mip and
+    /// the model renders gray. Step down through the mips and accept the first that isn't essentially empty.</summary>
     private static (byte[] rgba, int width, int height)? DecodeRobust(PackageManager mgr, uint texHash)
     {
         if (!mgr.ByTag.TryGetValue(texHash, out var te)) return null;
-        return mgr.DecodeThumb(te, 2048) ?? mgr.DecodeThumb(te, 1024) ?? mgr.DecodeThumb(te, 512)
-               ?? mgr.DecodeThumb(te, 256) ?? mgr.DecodeThumb(te, 128) ?? mgr.DecodeThumb(te, 64) ?? mgr.Decode(te);
+        // Cap at 1024 — plenty crisp for preview/export, but a quarter the cost of 2048 (decode + PNG +
+        // GPU upload), which kept the largest atlases from rendering in time.
+        foreach (int target in new[] { 1024, 512, 256, 128, 64 })
+        {
+            var d = mgr.DecodeThumb(te, target);
+            if (d is { } dd && !IsMostlyEmpty(dd.rgba)) return dd;
+        }
+        return mgr.Decode(te);
+    }
+
+    /// <summary>True when a decoded image is (near) all-black — the signature of an absent/streamed-out mip.</summary>
+    private static bool IsMostlyEmpty(byte[] rgba)
+    {
+        int n = rgba.Length / 4, dark = 0, step = Math.Max(1, n / 4096), sampled = 0;
+        for (int i = 0; i < n; i += step) { sampled++; if (rgba[i * 4] + rgba[i * 4 + 1] + rgba[i * 4 + 2] < 24) dark++; }
+        return sampled > 0 && dark >= sampled * 0.97;
     }
 
     // Genuine emission is LOCALIZED (screens, energy lines, indicators — a few % of the atlas). A gstack

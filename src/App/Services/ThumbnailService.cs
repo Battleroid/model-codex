@@ -75,6 +75,7 @@ public static class ThumbnailService
     private static IReadOnlyList<TexSample?> ResolvePartTextures(PackageManager mgr, ModelGeometry geom)
     {
         var list = new List<TexSample?>(geom.Parts.Count);
+        TexSample? primary = null;
         foreach (var part in geom.Parts)
         {
             TexSample? sample = null;
@@ -91,8 +92,12 @@ public static class ThumbnailService
                     TexCache[th] = sample;
                 }
             }
+            primary ??= sample;
             list.Add(sample);
         }
+        // Textureless stub-material parts fall back to the model's primary albedo (matches the preview).
+        if (primary != null)
+            for (int i = 0; i < list.Count; i++) list[i] ??= primary;
         return list;
     }
 
