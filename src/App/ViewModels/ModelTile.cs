@@ -23,5 +23,10 @@ public sealed partial class ModelTile : ObservableObject
     public BitmapSource? BaseThumb;
     public bool HoverRendering;
 
+    /// <summary>This tile's current auto-spin azimuth offset (advanced by the spin timer; paused while hovered).</summary>
+    public float SpinAngle;
+    /// <summary>True while the cursor is over this tile, so the spin timer leaves it alone.</summary>
+    public bool Hovering;
+
     public ModelTile(ModelEntry entry) => Entry = entry;
 }

@@ -122,9 +122,13 @@ public static class ThumbnailService
     public static void Hover(ModelTile tile, double fx, double fy)
     {
         var geom = tile.Geometry;
-        if (geom == null || tile.HoverRendering) return;
+        if (geom == null) return;
+        tile.Hovering = true; // pause auto-spin for this tile while the cursor drives it
+        if (tile.HoverRendering) return;
         tile.HoverRendering = true;
-        float az = IsoThumbnail.DefaultAzimuth + (float)fx * 0.6f;
+        // Orbit around the model's *current* position (its paused spin angle) so spinning tiles don't
+        // jump when grabbed; when spin is off SpinAngle is 0, giving the original default-angle orbit.
+        float az = IsoThumbnail.DefaultAzimuth + tile.SpinAngle + (float)fx * 0.6f;
         float el = IsoThumbnail.DefaultElevation - (float)fy * 0.45f;
         var tex = tile.PartTextures;
         _ = Task.Run(() =>
@@ -141,13 +145,15 @@ public static class ThumbnailService
 
     public static void ResetHover(ModelTile tile)
     {
+        tile.Hovering = false;
+        // When spinning, leave the thumbnail where it is — the spin timer resumes it from SpinAngle.
+        if (SpinEnabled) return;
         if (tile.BaseThumb != null) tile.Thumb = tile.BaseThumb;
     }
 
     // ===== Slow auto-spin of visible tiles (opt-in via Settings) =====
     private static readonly HashSet<ModelTile> Spinning = new();
     private static System.Windows.Threading.DispatcherTimer? _spinTimer;
-    private static float _spinAngle;
     public static bool SpinEnabled { get; private set; }
 
     /// <summary>Track a realized tile so it participates in auto-spin (no-op cost when spin is off).</summary>
@@ -163,7 +169,7 @@ public static class ThumbnailService
         {
             _spinTimer?.Stop();
             ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
-            foreach (var t in tiles) ResetHover(t);
+            foreach (var t in tiles) { t.SpinAngle = 0; if (t.BaseThumb != null) t.Thumb = t.BaseThumb; }
         }
     }
 
@@ -183,12 +189,14 @@ public static class ThumbnailService
     {
         ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
         if (tiles.Length == 0) { _spinTimer?.Stop(); return; }
-        _spinAngle += 0.05f; // radians per tick → a full slow revolution every ~14s
-        float az = IsoThumbnail.DefaultAzimuth + _spinAngle;
+        const float step = 0.05f; // radians per tick → a full slow revolution every ~14s
         foreach (var tile in tiles)
         {
             var geom = tile.Geometry;
-            if (geom == null || tile.HoverRendering) continue; // skip until geometry loads / prior frame done
+            // Skip until geometry loads, while a frame is in flight, or while the cursor is driving it.
+            if (geom == null || tile.HoverRendering || tile.Hovering) continue;
+            tile.SpinAngle += step; // per-tile angle so it resumes where a hover paused it
+            float az = IsoThumbnail.DefaultAzimuth + tile.SpinAngle;
             tile.HoverRendering = true;
             var tex = tile.PartTextures;
             _ = Task.Run(() =>
@@ -197,7 +205,7 @@ public static class ThumbnailService
                 try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex)); } catch { }
                 Application.Current?.Dispatcher.InvokeAsync(() =>
                 {
-                    if (src != null && SpinEnabled) tile.Thumb = src;
+                    if (src != null && SpinEnabled && !tile.Hovering) tile.Thumb = src;
                     tile.HoverRendering = false;
                 });
             });

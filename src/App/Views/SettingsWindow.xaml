@@ -66,7 +66,9 @@
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Cancel" Click="OnCancel"/>
-            <Button Content="Save" Style="{StaticResource Primary}" Margin="8,0,0,0" Click="OnSave"/>
+            <Button Style="{StaticResource Primary}" Margin="8,0,0,0" Click="OnSave">
+                <TextBlock Text="Save" Foreground="#FF101012"/>
+            </Button>
         </StackPanel>
     </Grid>
 </Window>
