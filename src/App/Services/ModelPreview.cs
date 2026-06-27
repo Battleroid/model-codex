@@ -16,7 +16,8 @@ public sealed record PreviewData(
     string Info,
     IReadOnlyList<int> Variants,
     int SelectedVariant,
-    List<ChannelValue> ChannelValues);
+    List<ChannelValue> ChannelValues,
+    List<ChannelValue> UsedChannels);
 
 /// <summary>Shared model preview pipeline: parse geometry, build per-part textured meshes + channels.</summary>
 public static class ModelPreview
@@ -27,7 +28,7 @@ public static class ModelPreview
     {
         var full = ModelParse.Parse(mgr, entry, detail);
         if (full == null || full.VertexCount == 0)
-            return new PreviewData(null, new(), new(), "no geometry", Array.Empty<int>(), -1, new());
+            return new PreviewData(null, new(), new(), "no geometry", Array.Empty<int>(), -1, new(), new());
 
         // Render only the selected permutation/variant — entities stack every variant on the same
         // geometry, so drawing them all z-fights and the model looks gray/wrong.
@@ -38,13 +39,19 @@ public static class ModelPreview
 
         var channels = new List<MaterialChannel>();
         var values = new List<ChannelValue>();
+        var used = new List<ChannelValue>();
         var seenMat = new HashSet<uint>();
         var seenTex = new HashSet<uint>();
+        var seenChan = new HashSet<uint>();
         foreach (var part in g.Parts)
         {
             if (part.MaterialHash == 0 || !seenMat.Add(part.MaterialHash)) continue;
             foreach (var c in MaterialMap.Channels(mgr, part.MaterialHash))
                 if (seenTex.Add(c.TexHash)) channels.Add(c);
+            // Object channels the material's shader bytecode references (aggregated across the model's
+            // materials), resolved to names where the wordlist has them — like Deimos's Channels panel.
+            foreach (uint h in MaterialMap.ObjectChannels(mgr, part.MaterialHash))
+                if (seenChan.Add(h)) used.Add(new ChannelValue(ChannelNames.Resolve(h), $"0x{h:X8}"));
             // Channel values from the first material only (avoids a huge mixed list).
             if (values.Count == 0)
             {
@@ -57,7 +64,7 @@ public static class ModelPreview
         var (mn, mx) = g.Bounds();
         var sz = mx - mn;
         string info = $"{g.Parts.Count} parts · {g.VertexCount:N0} verts · {g.TriangleCount:N0} tris · {sz.X:F1}×{sz.Y:F1}×{sz.Z:F1}";
-        return new PreviewData(g, parts, channels, info, full.Variants, sel, values);
+        return new PreviewData(g, parts, channels, info, full.Variants, sel, values, used);
     }
 
     public static HxMaterial MakeMaterial(byte[]? albedoDds, byte[]? emissiveDds = null, bool unlit = false)

@@ -20,6 +20,30 @@ public static class MaterialMap
     // unbound); cross-package Texture Tag64 @ 0x10. Register order == binding order; slot 0 is the albedo.
     private const int MAT_PixelShader = 0x278;
 
+    /// <summary>The object-channel hashes the material's pixel TFX bytecode references. In Marathon these
+    /// are opcode 0x5C followed by a big-endian u32 channel hash; resolve names via <see cref="ChannelNames"/>.
+    /// (Matches Deimos's per-entity "Channels" list — verified against 80A7B654.)</summary>
+    public static List<uint> ObjectChannels(PackageManager mgr, uint materialHash)
+    {
+        var result = new List<uint>();
+        byte[]? d = mgr.ReadTag(materialHash);
+        int f = MAT_PixelShader + 0x20; // SMaterialShader.TFX_Bytecode DynamicArray<u8>
+        if (d == null || f + 0x18 > d.Length) return result;
+        long count = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+        long rel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+        int off = f + 0x18 + (int)rel;
+        if (count is < 0 or > 0x100000 || off < 0 || off + (int)count > d.Length) return result;
+        var seen = new HashSet<uint>();
+        for (int i = off; i + 5 <= off + (int)count; i++)
+        {
+            if (d[i] != 0x5C) continue;
+            uint h = BinaryPrimitives.ReadUInt32BigEndian(d.AsSpan(i + 1)); // hashes stored big-endian
+            if (h is 0 or 0xFFFFFFFF) continue;
+            if (seen.Add(h)) result.Add(h);
+        }
+        return result;
+    }
+
     /// <summary>The pixel shader's constant-buffer Vec4 values — the material "channels" (named in Deimos
     /// via external metadata we don't have, so exposed here as raw indexed values). Read-only inspection.</summary>
     public static List<(float x, float y, float z, float w)> ChannelValues(PackageManager mgr, uint materialHash)

@@ -605,6 +605,54 @@ else if (cmd == "decstep")
         Console.WriteLine($"  target {t}: {dd.width}x{dd.height} avg=({r / n},{g / n},{b / n}) dark={100.0 * dark / n:F0}%");
     }
 }
+else if (cmd == "chans")
+{
+    // Walk a material's pixel TFX bytecode, extracting object (0x4e + u32 hash) and global (0x4f + u8 index)
+    // channel references. Resolve object names via FNV against a small known set.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint mat = Convert.ToUInt32(args[1], 16);
+    byte[]? d = mgr.ReadTag(mat);
+    if (d == null) { Console.WriteLine("no material"); return; }
+    // Operand byte-count per opcode (everything else = 0).
+    var opnd = new Dictionary<byte, int>();
+    foreach (byte b in new byte[] { 0x22,0x34,0x35,0x37,0x38,0x39,0x3a,0x3b,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4f,0x50 }) opnd[b] = 1;
+    foreach (byte b in new byte[] { 0x3c,0x3d,0x3e,0x3f,0x40,0x41,0x52,0x53,0x54 }) opnd[b] = 2;
+    opnd[0x4e] = 4;
+    uint Fnv(string s) { uint v = 0x811c9dc5; foreach (char c in s) { v *= 0x01000193; v ^= c; } return v; }
+    var known = new[] { "fp_iron_sight", "parent.fp_iron_sight", "is_local_player", "sun_glow_color", "fog_decay_color" }.ToDictionary(Fnv, s => s);
+    int f = 0x278 + 0x20; // Pixel shader TFX_Bytecode DynamicArray<u8>
+    long cnt = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+    long rel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+    int off = f + 0x18 + (int)rel;
+    Console.WriteLine($"bytecode @0x{off:X} len={cnt}");
+    int i = off, end = off + (int)cnt; var objs = new List<uint>(); var globs = new List<byte>();
+    while (i < end)
+    {
+        byte op = d[i++];
+        if (op == 0x4e) { if (i + 4 > end) break; objs.Add(BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(i))); i += 4; }
+        else if (op == 0x4f) { if (i >= end) break; globs.Add(d[i]); i += 1; }
+        else i += opnd.GetValueOrDefault(op, 0);
+    }
+    Console.WriteLine($"WALK object channels ({objs.Distinct().Count()}): {string.Join(", ", objs.Distinct().Select(h => h.ToString("X8")))}");
+    Console.WriteLine($"WALK global channels: {string.Join(", ", globs.Distinct().OrderBy(x => x))}");
+    // Marathon object-channel opcode is 0x5C (+ u32 hash). Scan the bytecode region for it.
+    Console.WriteLine("0x5C scan (object channels):");
+    for (int p = off; p + 5 <= off + (int)cnt; p++)
+        if (d[p] == 0x5C)
+        {
+            uint h = BinaryPrimitives.ReadUInt32LittleEndian(d.AsSpan(p + 1));
+            Console.WriteLine($"  @0x{p:X} 0x{h:X8} {(known.TryGetValue(h, out var kn) ? kn : "unk")}");
+        }
+}
+else if (cmd == "hashtest")
+{
+    uint Fnv(string s) { uint v = 0x811c9dc5; foreach (char c in s) { v *= 0x01000193; v ^= c; } return v; }
+    foreach (var s in args.Skip(1))
+        Console.WriteLine($"{s,-24} fnv=0x{Fnv(s):X8}");
+    foreach (var s in new[] { "fp_iron_sight", "is_local_player", "sun_glow_color", "fog_decay_color", "parent.fp_iron_sight" })
+        Console.WriteLine($"{s,-24} fnv=0x{Fnv(s):X8}");
+}
 else if (cmd == "cbuf")
 {
     // Dump the pixel shader's constant-buffer Vec4 values (the "channels" Deimos shows as 4 floats each).

@@ -26,6 +26,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     public ObservableElement3DCollection PreviewModels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<MaterialChannel> Channels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<ChannelValue> ChannelValues { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<ChannelValue> UsedChannels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<PermutationOption> Permutations { get; } = new();
 
     [ObservableProperty] private Camera _camera;
@@ -109,6 +110,8 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
             foreach (var c in data.Channels) Channels.Add(c);
             ChannelValues.Clear();
             foreach (var v in data.ChannelValues) ChannelValues.Add(v);
+            UsedChannels.Clear();
+            foreach (var v in data.UsedChannels) UsedChannels.Add(v);
             // Rebuild the permutation list only when the variant set changes (keeps the selection stable).
             bool sameSet = Permutations.Count == data.Variants.Count
                            && Permutations.Select(p => p.Index).SequenceEqual(data.Variants);

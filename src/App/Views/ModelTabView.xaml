@@ -109,6 +109,18 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <TextBlock Text="CHANNELS USED" Style="{StaticResource k}" Margin="0,10,0,4"
+                                   Visibility="{Binding UsedChannels.Count, Converter={StaticResource CountVis}}"/>
+                        <ItemsControl ItemsSource="{Binding UsedChannels}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,0,0,1">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Values}" Foreground="{StaticResource TextFaint}" FontSize="9" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Index}" Foreground="{StaticResource TextC}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <TextBlock Text="CHANNEL VALUES  (read-only)" Style="{StaticResource k}" Margin="0,10,0,4"
                                    Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"/>
                         <ItemsControl ItemsSource="{Binding ChannelValues}">

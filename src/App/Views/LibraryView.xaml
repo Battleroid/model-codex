@@ -263,6 +263,26 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
+                    <TextBlock Text="CHANNELS USED" Style="{StaticResource k}" Margin="0,8,0,4"
+                               Visibility="{Binding UsedChannels.Count, Converter={StaticResource CountVis}}"/>
+                    <ListBox ItemsSource="{Binding UsedChannels}" MaxHeight="110" Background="Transparent" BorderThickness="0"
+                             Visibility="{Binding UsedChannels.Count, Converter={StaticResource CountVis}}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,1"/>
+                                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter/></ControlTemplate></Setter.Value></Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Values}" Foreground="{StaticResource TextFaint}" FontSize="9" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Index}" Foreground="{StaticResource TextC}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
                     <TextBlock Text="CHANNEL VALUES  (read-only)" Style="{StaticResource k}" Margin="0,8,0,4"
                                Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"/>
                     <ListBox ItemsSource="{Binding ChannelValues}" MaxHeight="120" Background="Transparent" BorderThickness="0"
