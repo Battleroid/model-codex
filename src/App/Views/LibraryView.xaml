@@ -203,6 +203,10 @@
                                 <TextBlock Text="Background…" Margin="7,0,0,0" FontSize="11" VerticalAlignment="Center"/>
                             </DockPanel>
                         </Button>
+                        <DockPanel Width="120" Margin="0,6,0,0">
+                            <TextBlock DockPanel.Dock="Left" Text="Exp" Foreground="{StaticResource TextDim}" FontSize="10" VerticalAlignment="Center"/>
+                            <Slider Minimum="0.3" Maximum="2.5" Value="{Binding Exposure}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                        </DockPanel>
                     </StackPanel>
                 </Grid>
 
@@ -255,6 +259,30 @@
                                     <TextBlock Foreground="{StaticResource TextDim}" FontSize="9" VerticalAlignment="Center">
                                         <Run Text="{Binding Width, Mode=OneWay}"/><Run Text="×"/><Run Text="{Binding Height, Mode=OneWay}"/>
                                     </TextBlock>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="CHANNEL VALUES  (read-only)" Style="{StaticResource k}" Margin="0,8,0,4"
+                               Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"/>
+                    <ListBox ItemsSource="{Binding ChannelValues}" MaxHeight="120" Background="Transparent" BorderThickness="0"
+                             Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,1"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem"><ContentPresenter/></ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Index}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="34"/>
+                                    <TextBlock Text="{Binding Values}" Foreground="{StaticResource TextDim}" FontSize="9"/>
                                 </DockPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

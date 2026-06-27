@@ -25,6 +25,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     public EffectsManager EffectsManager { get; } = new DefaultEffectsManager();
     public ObservableElement3DCollection PreviewModels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<MaterialChannel> Channels { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<ChannelValue> ChannelValues { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<PermutationOption> Permutations { get; } = new();
 
     [ObservableProperty] private Camera _camera;
@@ -36,6 +37,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
     [ObservableProperty] private MaterialView _materialView = MaterialView.Shaded;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
+    [ObservableProperty] private double _exposure = 1.0;
     [ObservableProperty] private MColor _previewBg = BgColors.Parse(AppState.Instance.Config.PreviewBg);
     [ObservableProperty] private bool _flatShading = AppState.Instance.Config.FlatShading;
 
@@ -105,6 +107,8 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
             ModelPreview.Populate(PreviewModels, data, Wireframe);
             Channels.Clear();
             foreach (var c in data.Channels) Channels.Add(c);
+            ChannelValues.Clear();
+            foreach (var v in data.ChannelValues) ChannelValues.Add(v);
             // Rebuild the permutation list only when the variant set changes (keeps the selection stable).
             bool sameSet = Permutations.Count == data.Variants.Count
                            && Permutations.Select(p => p.Index).SequenceEqual(data.Variants);
@@ -152,7 +156,8 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     partial void OnFlatShadingChanged(bool value) { AppState.Instance.SetFlatShading(value); _ = LoadAsync(); }
     partial void OnPreviewBgChanged(MColor value) => AppState.Instance.SetPreviewBg(BgColors.ToHex(value));
 
-    partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value);
+    partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value, Exposure);
+    partial void OnExposureChanged(double value) => Lights.Apply(Lighting, value);
 
     partial void OnWireframeChanged(bool value)
     {

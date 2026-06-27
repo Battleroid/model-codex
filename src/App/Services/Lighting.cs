@@ -14,6 +14,9 @@ public enum MaterialView { Shaded, Albedo, Normal, Metalness, Emission, Transmis
 public enum GridTex { Textured, Normal, Untextured }
 public sealed record GridTexOption(GridTex Mode, string Name) { public override string ToString() => Name; }
 
+/// <summary>One material channel value (pixel cbuffer Vec4) for the read-only inspector.</summary>
+public sealed record ChannelValue(string Index, string Values);
+
 /// <summary>Combo options. ToString returns Name so the closed ComboBox display shows it reliably.</summary>
 public sealed record LightingOption(LightingStyle Style, string Name) { public override string ToString() => Name; }
 public sealed record DetailOption(Tiger.Model.ModelDetail Detail, string Name) { public override string ToString() => Name; }
@@ -45,11 +48,18 @@ public sealed partial class LightingState : ObservableObject
 
     public LightingState() => Apply(LightingStyle.Lookdev);
 
-    public void Apply(LightingStyle style)
+    /// <summary>Apply a style's rig, scaling all light intensities by <paramref name="exposure"/>.</summary>
+    public void Apply(LightingStyle style, double exposure = 1.0)
     {
         var r = Lighting.Rig(style);
-        Ambient = r.Ambient; Key = r.Key; KeyDir = r.KeyDir;
-        Fill = r.Fill; FillDir = r.FillDir; Rim = r.Rim; RimDir = r.RimDir;
+        Ambient = Scale(r.Ambient, exposure); Key = Scale(r.Key, exposure); KeyDir = r.KeyDir;
+        Fill = Scale(r.Fill, exposure); FillDir = r.FillDir; Rim = Scale(r.Rim, exposure); RimDir = r.RimDir;
+    }
+
+    private static Color Scale(Color c, double e)
+    {
+        byte S(byte v) => (byte)Math.Clamp(v * e, 0, 255);
+        return Color.FromRgb(S(c.R), S(c.G), S(c.B));
     }
 }
 

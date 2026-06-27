@@ -56,6 +56,8 @@
                     <Slider Width="120" Minimum="15" Maximum="100" VerticalAlignment="Center"
                             Value="{Binding Camera.FieldOfView, Mode=TwoWay}"
                             IsEnabled="{Binding Isometric, Converter={StaticResource Not}}"/>
+                    <TextBlock Text="EXP" Style="{StaticResource k}" VerticalAlignment="Center" Margin="18,0,6,0"/>
+                    <Slider Width="110" Minimum="0.3" Maximum="2.5" VerticalAlignment="Center" Value="{Binding Exposure}"/>
                 </StackPanel>
             </Border>
 
@@ -90,22 +92,36 @@
                             Command="{Binding ExportCommand}"/>
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Channels}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{StaticResource Inset}" Margin="0,0,0,2" Padding="6,3">
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Format}"
-                                                   Foreground="{StaticResource TextFaint}" FontSize="9" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding TagId}" Foreground="{StaticResource TextC}" FontSize="10" Width="78"/>
-                                        <TextBlock Foreground="{StaticResource TextDim}" FontSize="9" VerticalAlignment="Center">
-                                            <Run Text="{Binding Width, Mode=OneWay}"/><Run Text="×"/><Run Text="{Binding Height, Mode=OneWay}"/>
-                                        </TextBlock>
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Channels}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource Inset}" Margin="0,0,0,2" Padding="6,3">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Format}"
+                                                       Foreground="{StaticResource TextFaint}" FontSize="9" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding TagId}" Foreground="{StaticResource TextC}" FontSize="10" Width="78"/>
+                                            <TextBlock Foreground="{StaticResource TextDim}" FontSize="9" VerticalAlignment="Center">
+                                                <Run Text="{Binding Width, Mode=OneWay}"/><Run Text="×"/><Run Text="{Binding Height, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="CHANNEL VALUES  (read-only)" Style="{StaticResource k}" Margin="0,10,0,4"
+                                   Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"/>
+                        <ItemsControl ItemsSource="{Binding ChannelValues}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,0,0,1">
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Index}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="34"/>
+                                        <TextBlock Text="{Binding Values}" Foreground="{StaticResource TextDim}" FontSize="9"/>
                                     </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </ScrollViewer>
             </DockPanel>
         </Border>

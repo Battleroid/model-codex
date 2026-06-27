@@ -20,6 +20,30 @@ public static class MaterialMap
     // unbound); cross-package Texture Tag64 @ 0x10. Register order == binding order; slot 0 is the albedo.
     private const int MAT_PixelShader = 0x278;
 
+    /// <summary>The pixel shader's constant-buffer Vec4 values — the material "channels" (named in Deimos
+    /// via external metadata we don't have, so exposed here as raw indexed values). Read-only inspection.</summary>
+    public static List<(float x, float y, float z, float w)> ChannelValues(PackageManager mgr, uint materialHash)
+    {
+        var list = new List<(float, float, float, float)>();
+        byte[]? d = mgr.ReadTag(materialHash);
+        int f = MAT_PixelShader + 0x50; // SMaterialShader.CBuffers DynamicArray<Vec4>
+        if (d == null || f + 0x18 > d.Length) return list;
+        long count = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+        long rel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+        int off = f + 0x18 + (int)rel;
+        if (count is < 0 or > 512 || off < 0 || off + (int)count * 16 > d.Length) return list;
+        for (int k = 0; k < count; k++)
+        {
+            int e = off + k * 16;
+            list.Add((
+                BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e)),
+                BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 4)),
+                BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 8)),
+                BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 12))));
+        }
+        return list;
+    }
+
     /// <summary>The pixel shader's bound textures in register order: (TextureIndex, textureHash). This is
     /// the authoritative texture set — slot 0 is albedo, slot 1 normal, etc. Empty if none are bound.</summary>
     public static List<(int index, uint tex)> PixelTextures(PackageManager mgr, uint materialHash)

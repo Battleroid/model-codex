@@ -43,6 +43,9 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     /// <summary>Permutations/variants of the selected model (gear/skin colour sets); empty when none.</summary>
     public ObservableCollection<PermutationOption> Permutations { get; } = new();
 
+    /// <summary>Raw per-material channel values (pixel cbuffer Vec4s) — read-only inspection.</summary>
+    public ObservableCollection<ChannelValue> ChannelValues { get; } = new();
+
     /// <summary>Live light rig bound by the viewport (direct children illuminate; ItemsModel3D ones don't).</summary>
     public LightingState Lights { get; } = new();
 
@@ -58,6 +61,7 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private LightingStyle _gridLighting = LightingStyle.Lookdev;
     [ObservableProperty] private GridTex _gridTexture = GridTex.Textured;
     [ObservableProperty] private bool _gridBusy;
+    [ObservableProperty] private double _exposure = 1.0;
 
     public static IReadOnlyList<GridTexOption> GridTextures { get; } = new[]
     {
@@ -105,7 +109,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
 
     private PreviewData? _lastData;
 
-    partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value);
+    partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value, Exposure);
+    partial void OnExposureChanged(double value) => Lights.Apply(Lighting, value);
 
     partial void OnTexturedChanged(bool value)
     {
@@ -238,6 +243,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
             {
                 Channels.Clear();
                 foreach (var c in data.Channels) Channels.Add(c);
+                ChannelValues.Clear();
+                foreach (var v in data.ChannelValues) ChannelValues.Add(v);
             }
             // Rebuild the permutation selector only when the variant SET changes (i.e. a new model) —
             // not on a pure permutation switch, which would clear the list and blank the ComboBox display.

@@ -605,6 +605,35 @@ else if (cmd == "decstep")
         Console.WriteLine($"  target {t}: {dd.width}x{dd.height} avg=({r / n},{g / n},{b / n}) dark={100.0 * dark / n:F0}%");
     }
 }
+else if (cmd == "cbuf")
+{
+    // Dump the pixel shader's constant-buffer Vec4 values (the "channels" Deimos shows as 4 floats each).
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+    uint mat = Convert.ToUInt32(args[1], 16);
+    byte[]? d = mgr.ReadTag(mat);
+    if (d == null) { Console.WriteLine("no material"); return; }
+    foreach (var (label, baseOff) in new[] { ("Pixel", 0x278), ("Vertex", 0x58) })
+        foreach (var (fieldName, rel) in new[] { ("CBuffers", 0x50), ("CBuffer1", 0x90) })
+        {
+            int f = baseOff + rel;
+            if (f + 0x18 > d.Length) continue;
+            long c = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+            long ro = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+            int off = f + 0x18 + (int)ro;
+            if (c is < 0 or > 256 || off < 0 || off + (int)c * 16 > d.Length) continue;
+            Console.WriteLine($"{label}.{fieldName} @0x{f:X} count={c} dataOff=0x{off:X}");
+            for (int k = 0; k < Math.Min(c, 24); k++)
+            {
+                int e = off + k * 16;
+                float x = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e));
+                float y = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 4));
+                float z = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 8));
+                float w = BinaryPrimitives.ReadSingleLittleEndian(d.AsSpan(e + 12));
+                Console.WriteLine($"  [{k,2}] ({x,8:F3}, {y,8:F3}, {z,8:F3}, {w,8:F3})");
+            }
+        }
+}
 else if (cmd == "albedo")
 {
     // Exercise the real MaterialMap selection path (same lib the app uses).

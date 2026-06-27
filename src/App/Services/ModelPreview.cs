@@ -15,7 +15,8 @@ public sealed record PreviewData(
     List<MaterialChannel> Channels,
     string Info,
     IReadOnlyList<int> Variants,
-    int SelectedVariant);
+    int SelectedVariant,
+    List<ChannelValue> ChannelValues);
 
 /// <summary>Shared model preview pipeline: parse geometry, build per-part textured meshes + channels.</summary>
 public static class ModelPreview
@@ -26,7 +27,7 @@ public static class ModelPreview
     {
         var full = ModelParse.Parse(mgr, entry, detail);
         if (full == null || full.VertexCount == 0)
-            return new PreviewData(null, new(), new(), "no geometry", Array.Empty<int>(), -1);
+            return new PreviewData(null, new(), new(), "no geometry", Array.Empty<int>(), -1, new());
 
         // Render only the selected permutation/variant — entities stack every variant on the same
         // geometry, so drawing them all z-fights and the model looks gray/wrong.
@@ -36,6 +37,7 @@ public static class ModelPreview
         var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo, view, flat);
 
         var channels = new List<MaterialChannel>();
+        var values = new List<ChannelValue>();
         var seenMat = new HashSet<uint>();
         var seenTex = new HashSet<uint>();
         foreach (var part in g.Parts)
@@ -43,12 +45,19 @@ public static class ModelPreview
             if (part.MaterialHash == 0 || !seenMat.Add(part.MaterialHash)) continue;
             foreach (var c in MaterialMap.Channels(mgr, part.MaterialHash))
                 if (seenTex.Add(c.TexHash)) channels.Add(c);
+            // Channel values from the first material only (avoids a huge mixed list).
+            if (values.Count == 0)
+            {
+                var cb = MaterialMap.ChannelValues(mgr, part.MaterialHash);
+                for (int i = 0; i < cb.Count; i++)
+                    values.Add(new ChannelValue($"[{i}]", $"{cb[i].x:0.###}, {cb[i].y:0.###}, {cb[i].z:0.###}, {cb[i].w:0.###}"));
+            }
         }
 
         var (mn, mx) = g.Bounds();
         var sz = mx - mn;
         string info = $"{g.Parts.Count} parts · {g.VertexCount:N0} verts · {g.TriangleCount:N0} tris · {sz.X:F1}×{sz.Y:F1}×{sz.Z:F1}";
-        return new PreviewData(g, parts, channels, info, full.Variants, sel);
+        return new PreviewData(g, parts, channels, info, full.Variants, sel, values);
     }
 
     public static HxMaterial MakeMaterial(byte[]? albedoDds, byte[]? emissiveDds = null, bool unlit = false)
