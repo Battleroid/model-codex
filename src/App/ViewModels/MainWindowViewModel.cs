@@ -37,6 +37,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         GameDirText = string.IsNullOrEmpty(dir) ? "No game folder set" : dir!;
     }
 
+    /// <summary>Push anti-aliasing changes to the library preview and every open model tab.</summary>
+    public void RefreshPreviewQuality()
+    {
+        Library.RefreshAntiAliasing();
+        foreach (var t in Tabs.OfType<ModelTabViewModel>()) t.RefreshAntiAliasing();
+    }
+
     [RelayCommand]
     public async Task LoadIndex()
     {

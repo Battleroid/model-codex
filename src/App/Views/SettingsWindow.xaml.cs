@@ -26,6 +26,8 @@ public partial class SettingsWindow : Window
         ExportTexturesBox.IsChecked = c.ExportTextures;
         IsometricBox.IsChecked = c.IsometricByDefault;
         SpinPreviewsBox.IsChecked = c.SpinPreviews;
+        AntiAliasBox.IsChecked = c.AntiAliasing;
+        SpinFpsSlider.Value = c.SpinFps;
     }
 
     private static void SelectByTag(ComboBox box, string tag)
@@ -65,7 +67,12 @@ public partial class SettingsWindow : Window
         st.SetExportTextures(ExportTexturesBox.IsChecked == true);
         st.SetIsometricByDefault(IsometricBox.IsChecked == true);
         st.SetSpinPreviews(SpinPreviewsBox.IsChecked == true);
+        st.SetSpinFps((int)SpinFpsSlider.Value);
+        st.SetAntiAliasing(AntiAliasBox.IsChecked == true);
+        ThumbnailService.SetSpinFps(st.Config.SpinFps);
+        ThumbnailService.SetAntiAliasing(st.Config.AntiAliasing);
         ThumbnailService.SetSpin(st.Config.SpinPreviews);
+        Vm?.RefreshPreviewQuality();
 
         Vm?.UpdateGameDirText();
         bool gameDirChanged = !string.Equals(oldGameDir, st.Config.GameDir, StringComparison.OrdinalIgnoreCase);

@@ -173,8 +173,16 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         ThumbnailService.SetBg(PreviewBg);
         ThumbnailService.SetLighting(GridLighting);
         ThumbnailService.SetView(GridTexture);
+        ThumbnailService.SetSpinFps(AppState.Instance.Config.SpinFps);
+        ThumbnailService.SetAntiAliasing(AppState.Instance.Config.AntiAliasing);
         ThumbnailService.SetSpin(AppState.Instance.Config.SpinPreviews);
     }
+
+    /// <summary>MSAA level for the preview viewport, driven by the anti-aliasing setting.</summary>
+    public MSAALevel Msaa => AppState.Instance.Config.AntiAliasing ? MSAALevel.Four : MSAALevel.Disable;
+
+    /// <summary>Re-apply anti-aliasing after a settings change (viewport MSAA + re-render grid tiles).</summary>
+    public void RefreshAntiAliasing() { OnPropertyChanged(nameof(Msaa)); ReRenderGrid(); }
 
     public void SetManager(PackageManager mgr)
     {

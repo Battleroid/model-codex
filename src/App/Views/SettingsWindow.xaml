@@ -60,8 +60,19 @@
                       Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
             <CheckBox x:Name="IsometricBox" Content="Open model tabs in isometric projection by default"
                       Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
+            <CheckBox x:Name="AntiAliasBox" Content="Anti-alias previews (smoother edges; costs more GPU/CPU)"
+                      Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
             <CheckBox x:Name="SpinPreviewsBox" Content="Slowly spin grid thumbnails as live previews"
                       Foreground="{StaticResource TextC}"/>
+            <DockPanel Margin="0,8,0,0">
+                <TextBlock DockPanel.Dock="Left" Text="Spin FPS" Foreground="{StaticResource TextDim}"
+                           FontSize="11" VerticalAlignment="Center" Width="64"/>
+                <TextBlock DockPanel.Dock="Right" Width="28" TextAlignment="Right" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextC}" FontSize="11"
+                           Text="{Binding Value, ElementName=SpinFpsSlider, StringFormat=0}"/>
+                <Slider x:Name="SpinFpsSlider" Minimum="5" Maximum="60" TickFrequency="5" IsSnapToTickEnabled="True"
+                        VerticalAlignment="Center" Margin="8,0"/>
+            </DockPanel>
         </StackPanel>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">

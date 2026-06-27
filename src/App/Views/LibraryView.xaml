@@ -221,7 +221,7 @@
                 <Border Grid.Row="1" Margin="8,0,8,8" Background="{StaticResource Inset}">
                     <hx:Viewport3DX Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
                                     BackgroundColor="{Binding PreviewBg}" ShowCoordinateSystem="True"
-                                    CoordinateSystemLabelForeground="#9b9ba3" MSAA="Four"
+                                    CoordinateSystemLabelForeground="#9b9ba3" MSAA="{Binding Msaa}"
                                     FixedRotationPointEnabled="True" ZoomExtentsWhenLoaded="False"
                                     IsInertiaEnabled="True" CameraMode="Inspect">
                         <hx:AmbientLight3D Color="{Binding Lights.Ambient}"/>

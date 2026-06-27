@@ -65,7 +65,7 @@
 
             <hx:Viewport3DX x:Name="Viewport" Grid.Row="1" Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
                             BackgroundColor="{Binding PreviewBg}" ShowCoordinateSystem="True"
-                            CoordinateSystemLabelForeground="#9b9ba3" MSAA="Four"
+                            CoordinateSystemLabelForeground="#9b9ba3" MSAA="{Binding Msaa}"
                             FixedRotationPointEnabled="True" IsInertiaEnabled="True" CameraMode="Inspect"
                             ShowViewCube="True">
                 <hx:AmbientLight3D Color="{Binding Lights.Ambient}"/>

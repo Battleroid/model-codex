@@ -85,6 +85,8 @@ public sealed class AppState
                 root["PreviewBg"] = Config.PreviewBg;
                 root["FlatShading"] = Config.FlatShading;
                 root["SpinPreviews"] = Config.SpinPreviews;
+                root["SpinFps"] = Config.SpinFps;
+                root["AntiAliasing"] = Config.AntiAliasing;
                 File.WriteAllText(_configPath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             }
             catch { }
@@ -100,6 +102,8 @@ public sealed class AppState
     public void SetPreviewBg(string v) { Config.PreviewBg = v; Save(); }
     public void SetFlatShading(bool v) { Config.FlatShading = v; Save(); }
     public void SetSpinPreviews(bool v) { Config.SpinPreviews = v; Save(); }
+    public void SetSpinFps(int v) { Config.SpinFps = v; Save(); }
+    public void SetAntiAliasing(bool v) { Config.AntiAliasing = v; Save(); }
 
     /// <summary>Build the package/model index (call off the UI thread).</summary>
     public PackageManager BuildIndex(Action<double, string>? progress = null)

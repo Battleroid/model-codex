@@ -21,4 +21,8 @@ public sealed class AppConfig
     public bool FlatShading { get; set; } = false;
     /// <summary>Slowly rotate each grid tile's thumbnail as a live spinning preview (off by default).</summary>
     public bool SpinPreviews { get; set; } = false;
+    /// <summary>Target frames-per-second for the grid spin animation.</summary>
+    public int SpinFps { get; set; } = 20;
+    /// <summary>Anti-alias previews: MSAA on the 3D viewports + supersampled grid thumbnails.</summary>
+    public bool AntiAliasing { get; set; } = true;
 }

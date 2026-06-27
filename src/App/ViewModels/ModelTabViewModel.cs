@@ -42,6 +42,10 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     [ObservableProperty] private MColor _previewBg = BgColors.Parse(AppState.Instance.Config.PreviewBg);
     [ObservableProperty] private bool _flatShading = AppState.Instance.Config.FlatShading;
 
+    /// <summary>MSAA level for the viewport, driven by the anti-aliasing setting.</summary>
+    public MSAALevel Msaa => AppState.Instance.Config.AntiAliasing ? MSAALevel.Four : MSAALevel.Disable;
+    public void RefreshAntiAliasing() => OnPropertyChanged(nameof(Msaa));
+
     public LightingState Lights { get; } = new();
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
     public static IReadOnlyList<MaterialViewOption> MaterialViews => LibraryViewModel.MaterialViews;

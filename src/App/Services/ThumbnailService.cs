@@ -67,7 +67,7 @@ public static class ThumbnailService
                     var g = parsed.WithVariant(parsed.DefaultVariant);
                     var textures = ResolvePartTextures(mgr, g);
                     var src = ToBitmap(IsoThumbnail.Render(g, ThumbSize, Bg, Face,
-                        IsoThumbnail.DefaultAzimuth, IsoThumbnail.DefaultElevation, textures));
+                        IsoThumbnail.DefaultAzimuth, IsoThumbnail.DefaultElevation, textures, _supersample));
                     return (g, textures, src);
                 }
                 catch { return (null, null, null); }
@@ -134,7 +134,7 @@ public static class ThumbnailService
         _ = Task.Run(() =>
         {
             BitmapSource? src = null;
-            try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, el, tex)); } catch { }
+            try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, el, tex, _supersample)); } catch { }
             Application.Current?.Dispatcher.InvokeAsync(() =>
             {
                 if (src != null) tile.Thumb = src;
@@ -155,6 +155,26 @@ public static class ThumbnailService
     private static readonly HashSet<ModelTile> Spinning = new();
     private static System.Windows.Threading.DispatcherTimer? _spinTimer;
     public static bool SpinEnabled { get; private set; }
+    private const float SpinSpeed = 0.55f; // radians/sec — constant regardless of fps
+    private static int _spinFps = 20;
+    private static int _supersample = 2; // 2 = anti-aliased thumbnails, 1 = off
+
+    /// <summary>Set the grid-spin frame rate (clamped). Re-applies the timer interval live.</summary>
+    public static void SetSpinFps(int fps)
+    {
+        _spinFps = Math.Clamp(fps, 5, 60);
+        if (_spinTimer != null) _spinTimer.Interval = TimeSpan.FromMilliseconds(1000.0 / _spinFps);
+    }
+
+    /// <summary>Toggle anti-aliasing of grid thumbnails (supersampling). Clears the rendered cache so
+    /// tiles re-render at the new quality; the caller should re-request visible tiles.</summary>
+    public static void SetAntiAliasing(bool on)
+    {
+        int ss = on ? 2 : 1;
+        if (ss == _supersample) return;
+        _supersample = ss;
+        ClearRendered();
+    }
 
     /// <summary>Track a realized tile so it participates in auto-spin (no-op cost when spin is off).</summary>
     public static void RegisterSpin(ModelTile tile) { lock (Spinning) Spinning.Add(tile); EnsureSpinTimer(); }
@@ -179,7 +199,7 @@ public static class ThumbnailService
         if (_spinTimer == null)
         {
             _spinTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
-            { Interval = TimeSpan.FromMilliseconds(45) };
+            { Interval = TimeSpan.FromMilliseconds(1000.0 / _spinFps) };
             _spinTimer.Tick += (_, _) => SpinTick();
         }
         if (!_spinTimer.IsEnabled) _spinTimer.Start();
@@ -189,7 +209,8 @@ public static class ThumbnailService
     {
         ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
         if (tiles.Length == 0) { _spinTimer?.Stop(); return; }
-        const float step = 0.025f; // radians per tick; ~45ms ticks → smooth, ~full revolution every ~11s
+        float step = SpinSpeed / _spinFps; // keep rotation speed constant across frame rates
+        int ss = _supersample;
         foreach (var tile in tiles)
         {
             var geom = tile.Geometry;
@@ -202,7 +223,7 @@ public static class ThumbnailService
             _ = Task.Run(() =>
             {
                 BitmapSource? src = null;
-                try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex)); } catch { }
+                try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex, ss)); } catch { }
                 Application.Current?.Dispatcher.InvokeAsync(() =>
                 {
                     if (src != null && SpinEnabled && !tile.Hovering) tile.Thumb = src;
