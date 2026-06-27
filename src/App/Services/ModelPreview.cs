@@ -55,20 +55,38 @@ public static class ModelPreview
             // materials), resolved to names where the wordlist has them — like Deimos's Channels panel.
             foreach (uint h in MaterialMap.ObjectChannels(mgr, part.MaterialHash))
                 if (seenChan.Add(h)) used.Add(new ChannelValue(ChannelNames.Resolve(h), $"0x{h:X8}"));
-            // Channel values from the first material only (avoids a huge mixed list).
-            // Cap the editable set: each row hosts 4 drag-scrub controls inside the D3DImage-backed
-            // window, and past ~12 realized rows the SharpDX viewport stops compositing correctly
-            // (renders abstract colour blobs). 8 stays safely under that and covers the meaningful
-            // (non-zero) channels for every entity seen so far.
+            // Editable channel values from the first material only (avoids a huge mixed list).
+            // Each cbuffer Vec4 is a drag-scrub row. Slots the shader bytecode drives from a named object
+            // channel (see TfxChannels) get that name; the rest are static constants shown as [index].
+            // We surface named slots first, then non-zero constants. Cap the count: each row hosts 4 scrub
+            // controls in the D3DImage-backed window and past ~12 realized rows the SharpDX viewport stops
+            // compositing correctly (renders abstract colour blobs), so MaxEditableChannels stays under that.
             if (values.Count == 0)
             {
                 var cb = MaterialMap.ChannelValues(mgr, part.MaterialHash);
-                for (int i = 0; i < cb.Count && values.Count < MaxEditableChannels; i++)
+                var slotChan = TfxChannels.SlotChannels(mgr, part.MaterialHash);
+                var rows = new List<(int slot, string label, bool named, bool nonZero, (float x, float y, float z, float w) v)>();
+                for (int i = 0; i < cb.Count; i++)
                 {
-                    var (x, y, z, w) = cb[i];
-                    if (x == 0 && y == 0 && z == 0 && w == 0) continue; // skip empty/unused channels
-                    values.Add(new ChannelEdit($"[{i}]", x, y, z, w));
+                    bool named = slotChan.TryGetValue(i, out uint h);
+                    var v = cb[i];
+                    bool nonZero = v.x != 0 || v.y != 0 || v.z != 0 || v.w != 0;
+                    if (!named && !nonZero) continue; // skip empty, unnamed constants
+                    string label = named ? ChannelNames.Resolve(h) : $"[{i}]";
+                    rows.Add((i, label, named, nonZero, v));
                 }
+                // Within the row cap, reserve up to a third for named channels (so the names are always
+                // represented) and fill the rest with non-zero constants (whose change is visible when
+                // dragged). Named slots shown first, then the constants, each in slot order.
+                var namedRows = rows.Where(r => r.named).OrderBy(r => r.slot).ToList();
+                var otherRows = rows.Where(r => !r.named).OrderByDescending(r => r.nonZero).ThenBy(r => r.slot).ToList();
+                int namedQuota = Math.Min(namedRows.Count, MaxEditableChannels / 3);
+                var chosen = namedRows.Take(namedQuota)
+                    .Concat(otherRows.Take(MaxEditableChannels - namedQuota))
+                    .Concat(namedRows.Skip(namedQuota)) // backfill with more named if constants ran out
+                    .Take(MaxEditableChannels);
+                foreach (var r in chosen)
+                    values.Add(new ChannelEdit(r.label, r.v.x, r.v.y, r.v.z, r.v.w));
             }
         }
 

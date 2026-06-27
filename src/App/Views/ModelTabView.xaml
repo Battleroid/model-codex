@@ -128,7 +128,9 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <DockPanel Margin="0,0,0,2" LastChildFill="False">
-                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="28" VerticalAlignment="Center"/>
+                                        <TextBlock DockPanel.Dock="Top" Text="{Binding Label}" ToolTip="{Binding Label}"
+                                                   Foreground="{StaticResource TextC}" FontSize="9" Margin="0,0,0,1"
+                                                   TextTrimming="CharacterEllipsis"/>
                                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                                             <v:ScrubBox Value="{Binding X, Mode=TwoWay}" Width="46" Margin="0,0,2,0"/>
                                             <v:ScrubBox Value="{Binding Y, Mode=TwoWay}" Width="46" Margin="0,0,2,0"/>

@@ -1260,6 +1260,145 @@ else if (cmd == "stats")
 
     static void Bump(Dictionary<string, int> d, string k) => d[k] = d.GetValueOrDefault(k) + 1;
 }
+else if (cmd == "tfxinfer")
+{
+    // Reverse-engineer Marathon's TFX pixel-bytecode opcode table, then map each PopOutput cbuffer
+    // slot to the object channel that drives it. The documented opcode set (OpCodes reference) is
+    // shifted in Marathon: the object-channel push is 0x5C here vs 0x4E documented. We recover the
+    // uniform shift S by requiring every material's bytecode to walk (op + operand bytes) exactly to
+    // its end, then interpret with provenance to find slot<-channel relationships.
+    var mgr = new PackageManager(PKG_DIR, OODLE);
+    mgr.Index((p, m) => { });
+
+    // Documented operand widths, keyed by the *documented* opcode value.
+    var w1 = new byte[] { 0x22,0x34,0x35,0x36,0x37,0x38,0x39,0x3a,0x3b,0x43,0x44,0x45,0x46,0x47,0x48,0x49,0x4a,0x4b,0x4c,0x4d,0x4f,0x50 };
+    var w2 = new byte[] { 0x3c,0x3d,0x3e,0x3f,0x40,0x41,0x52,0x53,0x54 };
+    var docW = new Dictionary<byte,int>();
+    foreach (var b in w1) docW[b] = 1;
+    foreach (var b in w2) docW[b] = 2;
+    docW[0x4e] = 4; // PushObjectChannelVector (u32 hash)
+
+    int WidthFor(byte b, int shift)
+    {
+        int dv = b - shift;
+        if (dv < 0 || dv > 255) return 0;
+        return docW.GetValueOrDefault((byte)dv, 0);
+    }
+
+    // Collect pixel bytecode for every material tag.
+    byte[]? Bytecode(uint mat)
+    {
+        byte[]? d = mgr.ReadTag(mat);
+        if (d == null) return null;
+        int f = 0x278 + 0x20;
+        if (f + 0x18 > d.Length) return null;
+        long c = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f));
+        long rel = BinaryPrimitives.ReadInt64LittleEndian(d.AsSpan(f + 8));
+        int off = f + 0x18 + (int)rel;
+        if (c is < 1 or > 0x100000 || off < 0 || off + (int)c > d.Length) return null;
+        return d.AsSpan(off, (int)c).ToArray();
+    }
+
+    var matRefs = new HashSet<uint> { 0x808031D8, 0x8080BAF8, 0x80805350, 0x80808567 };
+    // Enumerate all material tags directly from the package entry tables.
+    var matHashes = new List<uint>();
+    foreach (var pkg in best.Values)
+        foreach (Entry e in pkg.Entries)
+            if (e.FileType == 8 && matRefs.Contains(e.Reference)) matHashes.Add(pkg.TagHash(e.Index));
+    Console.WriteLine($"material tags: {matHashes.Count}");
+
+    var codes = new List<byte[]>();
+    foreach (var mh in matHashes) { var bc = Bytecode(mh); if (bc is { Length: > 0 }) codes.Add(bc); }
+    Console.WriteLine($"with pixel bytecode: {codes.Count}");
+
+    // Phase A: find the shift S that makes the most bytecodes walk cleanly to their exact end.
+    int bestS = -1, bestClean = -1;
+    for (int s = 0; s <= 24; s++)
+    {
+        int clean = 0;
+        foreach (var bc in codes)
+        {
+            int i = 0; bool ok = true;
+            while (i < bc.Length)
+            {
+                int wdt = WidthFor(bc[i], s);
+                i += 1 + wdt;
+                if (i > bc.Length) { ok = false; break; }
+            }
+            if (ok && i == bc.Length) clean++;
+        }
+        if (clean > bestClean) { bestClean = clean; bestS = s; }
+        if (clean > 0) Console.WriteLine($"  shift +0x{s:X}: clean walks {clean}/{codes.Count}");
+    }
+    Console.WriteLine($"BEST shift = +0x{bestS:X} ({bestClean}/{codes.Count} clean, {100.0*bestClean/codes.Count:F1}%)");
+
+    // Phase B: with the best shift, interpret one material with channel provenance.
+    if (args.Length > 1)
+    {
+        uint mat = Convert.ToUInt32(args[1], 16);
+        var bc = Bytecode(mat);
+        if (bc == null) { Console.WriteLine("no bytecode"); return; }
+        int S = bestS;
+        byte OBJCHAN = (byte)(0x4e + S), GLOBCHAN = (byte)(0x4f + S), POPOUT = (byte)(0x44 + S),
+             POPOUTMAT4 = (byte)(0x45 + S), PUSHFROMOUT = (byte)(0x43 + S),
+             PUSHTEMP = (byte)(0x46 + S), POPTEMP = (byte)(0x47 + S);
+
+        // Stack/temp/output of provenance sets (which object-channel hashes contributed).
+        var stack = new List<HashSet<uint>>();
+        var temp = new Dictionary<int, HashSet<uint>>();
+        var outProv = new Dictionary<int, HashSet<uint>>();
+        var slotChannel = new Dictionary<int, List<uint>>();
+        HashSet<uint> Pop() { if (stack.Count == 0) return new(); var v = stack[^1]; stack.RemoveAt(stack.Count - 1); return v; }
+        HashSet<uint> PopN(int n) { var u = new HashSet<uint>(); for (int k = 0; k < n; k++) u.UnionWith(Pop()); return u; }
+        void Push(HashSet<uint> v) => stack.Add(v);
+
+        // (pop,push) stack effect by documented opcode; default (0,0).
+        var eff = new Dictionary<byte,(int pop,int push)>();
+        foreach (byte b in new byte[]{0x01,0x02,0x03,0x04,0x05,0x06,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f}) eff[b]=(2,1);
+        foreach (byte b in new byte[]{0x07,0x15,0x16,0x17,0x18,0x19,0x1a,0x1d,0x1e,0x1f,0x20,0x21,0x22,0x23,0x27,0x28,0x29,0x2a,0x2b,0x35,0x36,0x37,0x38,0x39,0x3a,0x3b}) eff[b]=(1,1);
+        foreach (byte b in new byte[]{0x10,0x11,0x12,0x13}) eff[b]=(3,1);
+        eff[0x14]=(2,0); eff[0x2c]=(1,0); eff[0x2d]=(4,0); eff[0x2e]=(5,1);
+        eff[0x34]=(0,1); // PushConstantVec4
+        foreach (byte b in new byte[]{0x3c,0x3d,0x40}) eff[b]=(0,1); // extern float/vec4/u32
+        eff[0x3e]=(0,4); // extern mat4 pushes 4
+        eff[0x42]=(0,1); eff[0x4c]=(0,1); eff[0x50]=(0,1); // Unk42/Unk4c/Unk50 push a constant
+        eff[0x51]=(1,0); eff[0x49]=(1,0);
+        foreach (byte b in new byte[]{0x52,0x53,0x54}) eff[b]=(0,1); // tex dim/tile
+
+        int ip = 0, opn = 0;
+        Console.WriteLine($"interpret {mat:X8} bytecode len={bc.Length} (OBJCHAN=0x{OBJCHAN:X} POPOUT=0x{POPOUT:X})");
+        while (ip < bc.Length)
+        {
+            byte b = bc[ip]; int wdt = WidthFor(b, S);
+            if (b == OBJCHAN)
+            {
+                uint hash = BinaryPrimitives.ReadUInt32BigEndian(bc.AsSpan(ip + 1)); // channel hashes are big-endian
+                Push(new HashSet<uint> { hash });
+            }
+            else if (b == GLOBCHAN) Push(new HashSet<uint>());
+            else if (b == PUSHFROMOUT) { int el = bc[ip+1]; Push(new HashSet<uint>(outProv.GetValueOrDefault(el) ?? new())); }
+            else if (b == PUSHTEMP) { int sl = bc[ip+1]; Push(new HashSet<uint>(temp.GetValueOrDefault(sl) ?? new())); }
+            else if (b == POPTEMP) { int sl = bc[ip+1]; temp[sl] = Pop(); }
+            else if (b == POPOUT)
+            {
+                int slot = bc[ip+1]; var prov = Pop(); outProv[slot] = prov;
+                if (prov.Count > 0) slotChannel[slot] = prov.ToList();
+                stack.Clear();
+            }
+            else if (b == POPOUTMAT4) { int slot = bc[ip+1]; var prov = PopN(4); for (int q=0;q<4;q++) outProv[slot+q]=prov; stack.Clear(); }
+            else
+            {
+                var (pp, ps) = eff.GetValueOrDefault((byte)(b - S), (0,0));
+                var u = PopN(pp);
+                for (int q = 0; q < ps; q++) Push(new HashSet<uint>(u));
+            }
+            ip += 1 + wdt; opn++;
+        }
+        Console.WriteLine($"  ops={opn} outputs written={outProv.Count} channel-driven slots={slotChannel.Count}");
+        foreach (var kv in slotChannel.OrderBy(k => k.Key))
+            Console.WriteLine($"  cbuffer[{kv.Key}] <- {string.Join(", ", kv.Value.Select(h => h.ToString("X8")))}");
+    }
+}
 else if (cmd == "decode")
 {
     var dxgi = KnownDxgi();

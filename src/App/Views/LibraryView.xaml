@@ -302,12 +302,14 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <DockPanel LastChildFill="False">
-                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="28" VerticalAlignment="Center"/>
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" ToolTip="{Binding Label}"
+                                               Foreground="{StaticResource TextC}" FontSize="9" Width="80" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                        <v:ScrubBox Value="{Binding X, Mode=TwoWay}" Width="44" Margin="0,0,2,0"/>
-                                        <v:ScrubBox Value="{Binding Y, Mode=TwoWay}" Width="44" Margin="0,0,2,0"/>
-                                        <v:ScrubBox Value="{Binding Z, Mode=TwoWay}" Width="44" Margin="0,0,2,0"/>
-                                        <v:ScrubBox Value="{Binding W, Mode=TwoWay}" Width="44"/>
+                                        <v:ScrubBox Value="{Binding X, Mode=TwoWay}" Width="40" Margin="0,0,2,0"/>
+                                        <v:ScrubBox Value="{Binding Y, Mode=TwoWay}" Width="40" Margin="0,0,2,0"/>
+                                        <v:ScrubBox Value="{Binding Z, Mode=TwoWay}" Width="40" Margin="0,0,2,0"/>
+                                        <v:ScrubBox Value="{Binding W, Mode=TwoWay}" Width="40"/>
                                     </StackPanel>
                                 </DockPanel>
                             </DataTemplate>
