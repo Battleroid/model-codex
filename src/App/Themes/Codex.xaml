@@ -181,6 +181,17 @@
         <Setter Property="BorderBrush" Value="{StaticResource Outline2}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Foreground" Value="{StaticResource TextC}"/>
+        <!-- Own template: the default ContextMenu template draws a left icon-gutter strip; drop it. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" Padding="2">
+                        <ItemsPresenter/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{StaticResource TextC}"/>

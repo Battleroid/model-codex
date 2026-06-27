@@ -144,6 +144,66 @@ public static class ThumbnailService
         if (tile.BaseThumb != null) tile.Thumb = tile.BaseThumb;
     }
 
+    // ===== Slow auto-spin of visible tiles (opt-in via Settings) =====
+    private static readonly HashSet<ModelTile> Spinning = new();
+    private static System.Windows.Threading.DispatcherTimer? _spinTimer;
+    private static float _spinAngle;
+    public static bool SpinEnabled { get; private set; }
+
+    /// <summary>Track a realized tile so it participates in auto-spin (no-op cost when spin is off).</summary>
+    public static void RegisterSpin(ModelTile tile) { lock (Spinning) Spinning.Add(tile); EnsureSpinTimer(); }
+    public static void UnregisterSpin(ModelTile tile) { lock (Spinning) Spinning.Remove(tile); }
+
+    /// <summary>Turn slow auto-spin on/off globally. When off, tiles snap back to their base angle.</summary>
+    public static void SetSpin(bool on)
+    {
+        SpinEnabled = on;
+        if (on) EnsureSpinTimer();
+        else
+        {
+            _spinTimer?.Stop();
+            ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
+            foreach (var t in tiles) ResetHover(t);
+        }
+    }
+
+    private static void EnsureSpinTimer()
+    {
+        if (!SpinEnabled || Application.Current == null) return;
+        if (_spinTimer == null)
+        {
+            _spinTimer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background)
+            { Interval = TimeSpan.FromMilliseconds(90) };
+            _spinTimer.Tick += (_, _) => SpinTick();
+        }
+        if (!_spinTimer.IsEnabled) _spinTimer.Start();
+    }
+
+    private static void SpinTick()
+    {
+        ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
+        if (tiles.Length == 0) { _spinTimer?.Stop(); return; }
+        _spinAngle += 0.05f; // radians per tick → a full slow revolution every ~14s
+        float az = IsoThumbnail.DefaultAzimuth + _spinAngle;
+        foreach (var tile in tiles)
+        {
+            var geom = tile.Geometry;
+            if (geom == null || tile.HoverRendering) continue; // skip until geometry loads / prior frame done
+            tile.HoverRendering = true;
+            var tex = tile.PartTextures;
+            _ = Task.Run(() =>
+            {
+                BitmapSource? src = null;
+                try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex)); } catch { }
+                Application.Current?.Dispatcher.InvokeAsync(() =>
+                {
+                    if (src != null && SpinEnabled) tile.Thumb = src;
+                    tile.HoverRendering = false;
+                });
+            });
+        }
+    }
+
     private static BitmapSource ToBitmap(byte[] rgba)
     {
         for (int i = 0; i < rgba.Length; i += 4) (rgba[i], rgba[i + 2]) = (rgba[i + 2], rgba[i]); // RGBA->BGRA

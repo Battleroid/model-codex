@@ -14,13 +14,42 @@ public partial class LibraryView : UserControl
     private void OnTileLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: ModelTile tile })
+        {
             ThumbnailService.Request(tile);
+            ThumbnailService.RegisterSpin(tile);
+        }
+    }
+
+    private void OnTileUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ModelTile tile })
+            ThumbnailService.UnregisterSpin(tile);
     }
 
     private void OnTileBound(object sender, DependencyPropertyChangedEventArgs e)
     {
+        if (e.OldValue is ModelTile old) ThumbnailService.UnregisterSpin(old);
         if (e.NewValue is ModelTile tile)
+        {
             ThumbnailService.Request(tile);
+            ThumbnailService.RegisterSpin(tile);
+        }
+    }
+
+    // Copy a tile's hash id to the clipboard (from the context menu or by clicking the id label).
+    private static void CopyHash(ModelTile tile)
+    {
+        try { Clipboard.SetText(tile.TagId); } catch { }
+    }
+
+    private void OnCtxCopyHash(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ModelTile t) CopyHash(t);
+    }
+
+    private void OnHashClick(object sender, MouseButtonEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is ModelTile t) { CopyHash(t); e.Handled = true; }
     }
 
     // Hovering a tile orbits the model slightly based on cursor position.

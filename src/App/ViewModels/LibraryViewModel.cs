@@ -173,6 +173,7 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         ThumbnailService.SetBg(PreviewBg);
         ThumbnailService.SetLighting(GridLighting);
         ThumbnailService.SetView(GridTexture);
+        ThumbnailService.SetSpin(AppState.Instance.Config.SpinPreviews);
     }
 
     public void SetManager(PackageManager mgr)

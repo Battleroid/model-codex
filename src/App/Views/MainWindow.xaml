@@ -39,9 +39,11 @@
                         </Button.ContextMenu>
                     </Button>
                     <Button Content="Settings" Click="OnSettings"/>
-                    <Button Content="Load models" Style="{StaticResource Primary}" Margin="8,0,0,0"
+                    <Button Style="{StaticResource Primary}" Margin="8,0,0,0"
                             Command="{Binding LoadIndexCommand}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}"/>
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource Not}}">
+                        <TextBlock Text="Load models" Foreground="#FF101012"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>

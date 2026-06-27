@@ -138,10 +138,11 @@
                         <DataTemplate>
                             <Grid Width="158" Height="178" Background="Transparent"
                                   MouseMove="OnTileHover" MouseLeave="OnTileHoverEnd"
-                                  DataContextChanged="OnTileBound" Loaded="OnTileLoaded">
+                                  DataContextChanged="OnTileBound" Loaded="OnTileLoaded" Unloaded="OnTileUnloaded">
                                 <Grid.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="Open in tab" Click="OnCtxOpen"/>
+                                        <MenuItem Header="Open in new tab" Click="OnCtxOpen"/>
+                                        <MenuItem Header="Copy hash id" Click="OnCtxCopyHash"/>
                                         <MenuItem Header="Export" Click="OnCtxExport"/>
                                     </ContextMenu>
                                 </Grid.ContextMenu>
@@ -154,7 +155,9 @@
                                            RenderOptions.BitmapScalingMode="HighQuality"/>
                                 </Border>
                                 <TextBlock Grid.Row="1" Text="{Binding TagId}" Foreground="{StaticResource TextDim}"
-                                           HorizontalAlignment="Center" FontSize="10" Padding="0,4"/>
+                                           HorizontalAlignment="Center" FontSize="10" Padding="0,4"
+                                           Cursor="Hand" ToolTip="Click to copy hash id"
+                                           MouseLeftButtonUp="OnHashClick"/>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

@@ -59,6 +59,8 @@
             <CheckBox x:Name="ExportTexturesBox" Content="Export mapped textures alongside the model"
                       Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
             <CheckBox x:Name="IsometricBox" Content="Open model tabs in isometric projection by default"
+                      Foreground="{StaticResource TextC}" Margin="0,0,0,8"/>
+            <CheckBox x:Name="SpinPreviewsBox" Content="Slowly spin grid thumbnails as live previews"
                       Foreground="{StaticResource TextC}"/>
         </StackPanel>
 

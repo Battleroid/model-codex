@@ -19,4 +19,6 @@ public sealed class AppConfig
     public string PreviewBg { get; set; } = "#101014";
     /// <summary>Smooth (averaged) vs flat (faceted) shading in previews.</summary>
     public bool FlatShading { get; set; } = false;
+    /// <summary>Slowly rotate each grid tile's thumbnail as a live spinning preview (off by default).</summary>
+    public bool SpinPreviews { get; set; } = false;
 }

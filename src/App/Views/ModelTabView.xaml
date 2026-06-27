@@ -56,13 +56,14 @@
                     <TextBlock Text="FOV" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <Slider Width="120" Minimum="15" Maximum="100" VerticalAlignment="Center"
                             Value="{Binding Camera.FieldOfView, Mode=TwoWay}"
+                            ValueChanged="OnFovChanged"
                             IsEnabled="{Binding Isometric, Converter={StaticResource Not}}"/>
                     <TextBlock Text="EXP" Style="{StaticResource k}" VerticalAlignment="Center" Margin="18,0,6,0"/>
                     <Slider Width="110" Minimum="0.3" Maximum="2.5" VerticalAlignment="Center" Value="{Binding Exposure}"/>
                 </StackPanel>
             </Border>
 
-            <hx:Viewport3DX Grid.Row="1" Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
+            <hx:Viewport3DX x:Name="Viewport" Grid.Row="1" Camera="{Binding Camera}" EffectsManager="{Binding EffectsManager}"
                             BackgroundColor="{Binding PreviewBg}" ShowCoordinateSystem="True"
                             CoordinateSystemLabelForeground="#9b9ba3"
                             FixedRotationPointEnabled="True" IsInertiaEnabled="True" CameraMode="Inspect"
