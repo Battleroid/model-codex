@@ -89,8 +89,10 @@
                 <StackPanel DockPanel.Dock="Bottom">
                     <TextBlock Text="{Binding ExportStatus}" Foreground="{StaticResource TextDim}" FontSize="10"
                                TextWrapping="Wrap" Margin="0,8,0,6"/>
-                    <Button Content="Export" Style="{StaticResource Primary}" HorizontalAlignment="Left"
-                            Command="{Binding ExportCommand}"/>
+                    <Button Style="{StaticResource Primary}" HorizontalAlignment="Left"
+                            Command="{Binding ExportCommand}">
+                        <TextBlock Text="Export" Foreground="#FF101012"/>
+                    </Button>
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>

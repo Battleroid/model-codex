@@ -62,6 +62,7 @@ public partial class App : Application
                     await Task.Delay(500);
                     vm.Library.MaterialView = mv;
                 }
+                if (args.Contains("tab")) { vm.OpenInTab(entry); await Task.Delay(2500); }
             }
             await Task.Delay(3000); // let the viewport parse + upload textures + render
 
