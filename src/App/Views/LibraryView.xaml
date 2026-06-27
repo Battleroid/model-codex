@@ -138,7 +138,7 @@
                         <DataTemplate>
                             <Grid Width="158" Height="178" Background="Transparent"
                                   MouseMove="OnTileHover" MouseLeave="OnTileHoverEnd"
-                                  DataContextChanged="OnTileBound" Loaded="OnTileLoaded" Unloaded="OnTileUnloaded">
+                                  DataContextChanged="OnTileBound" Loaded="OnTileLoaded">
                                 <Grid.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="Open in new tab" Click="OnCtxOpen"/>

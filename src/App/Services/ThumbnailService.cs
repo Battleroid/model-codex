@@ -152,7 +152,10 @@ public static class ThumbnailService
     }
 
     // ===== Slow auto-spin of visible tiles (opt-in via Settings) =====
-    private static readonly HashSet<ModelTile> Spinning = new();
+    // The spin loop pulls the set of currently on-screen tiles from this provider every tick rather than
+    // maintaining its own registration set. That makes it leak-proof: tiles scrolled out of view (or in a
+    // previously-browsed category) simply aren't returned, so nothing stale keeps rendering or stays alive.
+    public static Func<IReadOnlyList<ModelTile>>? VisibleTilesProvider;
     private static System.Windows.Threading.DispatcherTimer? _spinTimer;
     public static bool SpinEnabled { get; private set; }
     private const float SpinSpeed = 0.55f; // radians/sec — constant regardless of fps
@@ -176,11 +179,7 @@ public static class ThumbnailService
         ClearRendered();
     }
 
-    /// <summary>Track a realized tile so it participates in auto-spin (no-op cost when spin is off).</summary>
-    public static void RegisterSpin(ModelTile tile) { lock (Spinning) Spinning.Add(tile); EnsureSpinTimer(); }
-    public static void UnregisterSpin(ModelTile tile) { lock (Spinning) Spinning.Remove(tile); }
-
-    /// <summary>Turn slow auto-spin on/off globally. When off, tiles snap back to their base angle.</summary>
+    /// <summary>Turn slow auto-spin on/off globally. When off, on-screen tiles snap back to their base angle.</summary>
     public static void SetSpin(bool on)
     {
         SpinEnabled = on;
@@ -188,8 +187,8 @@ public static class ThumbnailService
         else
         {
             _spinTimer?.Stop();
-            ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
-            foreach (var t in tiles) { t.SpinAngle = 0; if (t.BaseThumb != null) t.Thumb = t.BaseThumb; }
+            foreach (var t in VisibleTilesProvider?.Invoke() ?? Array.Empty<ModelTile>())
+            { t.SpinAngle = 0; if (t.BaseThumb != null) t.Thumb = t.BaseThumb; }
         }
     }
 
@@ -207,10 +206,11 @@ public static class ThumbnailService
 
     private static void SpinTick()
     {
-        ModelTile[] tiles; lock (Spinning) tiles = Spinning.ToArray();
-        if (tiles.Length == 0) { _spinTimer?.Stop(); return; }
+        var tiles = VisibleTilesProvider?.Invoke();
+        if (tiles == null || tiles.Count == 0) return; // nothing on screen → idle (timer keeps ticking cheaply)
         float step = SpinSpeed / _spinFps; // keep rotation speed constant across frame rates
-        int ss = _supersample;
+        // Spin frames render without supersampling: motion hides the aliasing and it keeps the CPU cost
+        // ~4x lower. The crisp anti-aliased render is what shows when the tile is static or hovered.
         foreach (var tile in tiles)
         {
             var geom = tile.Geometry;
@@ -223,7 +223,7 @@ public static class ThumbnailService
             _ = Task.Run(() =>
             {
                 BitmapSource? src = null;
-                try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex, ss)); } catch { }
+                try { src = ToBitmap(IsoThumbnail.Render(geom, ThumbSize, Bg, Face, az, IsoThumbnail.DefaultElevation, tex, 1)); } catch { }
                 Application.Current?.Dispatcher.InvokeAsync(() =>
                 {
                     if (src != null && SpinEnabled && !tile.Hovering) tile.Thumb = src;

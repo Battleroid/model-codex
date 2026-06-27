@@ -8,32 +8,52 @@ namespace ModelCodex.App.Views;
 
 public partial class LibraryView : UserControl
 {
-    public LibraryView() => InitializeComponent();
+    public LibraryView()
+    {
+        InitializeComponent();
+        // The spin loop asks for the tiles that are actually realized right now, so nothing scrolled
+        // out of view (or in a previous category) keeps spinning or leaks.
+        ThumbnailService.VisibleTilesProvider = RealizedTiles;
+        Unloaded += (_, _) => { if (ThumbnailService.VisibleTilesProvider == RealizedTiles) ThumbnailService.VisibleTilesProvider = null; };
+    }
+
+    private WpfToolkit.Controls.VirtualizingWrapPanel? _itemsHost;
+
+    /// <summary>The grid tiles whose containers are currently realized (on screen) — the spin loop's set.</summary>
+    private IReadOnlyList<ModelTile> RealizedTiles()
+    {
+        _itemsHost ??= FindDescendant<WpfToolkit.Controls.VirtualizingWrapPanel>(GridList);
+        var list = new List<ModelTile>();
+        if (_itemsHost == null) return list;
+        foreach (var child in _itemsHost.Children)
+            if (child is ListBoxItem { IsVisible: true } li && li.DataContext is ModelTile t)
+                list.Add(t);
+        return list;
+    }
+
+    private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
+    {
+        int n = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < n; i++)
+        {
+            var c = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            if (c is T hit) return hit;
+            if (FindDescendant<T>(c) is { } deep) return deep;
+        }
+        return null;
+    }
 
     // Lazy-load a tile's thumbnail when its container is realized (Loaded) or recycled (DataContextChanged).
     private void OnTileLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: ModelTile tile })
-        {
             ThumbnailService.Request(tile);
-            ThumbnailService.RegisterSpin(tile);
-        }
-    }
-
-    private void OnTileUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: ModelTile tile })
-            ThumbnailService.UnregisterSpin(tile);
     }
 
     private void OnTileBound(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.OldValue is ModelTile old) ThumbnailService.UnregisterSpin(old);
         if (e.NewValue is ModelTile tile)
-        {
             ThumbnailService.Request(tile);
-            ThumbnailService.RegisterSpin(tile);
-        }
     }
 
     // Copy a tile's hash id to the clipboard (from the context menu or by clicking the id label).
