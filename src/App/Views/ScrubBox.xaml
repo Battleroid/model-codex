@@ -1,0 +1,9 @@
+<UserControl x:Class="ModelCodex.App.Views.ScrubBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Cursor="SizeWE">
+    <Border Background="#FF1B1B1E" BorderBrush="#FF3A3A3E" BorderThickness="1" MinWidth="44" Padding="3,1">
+        <TextBlock x:Name="Txt" FontSize="9" Foreground="#FFCDCDD2" HorizontalAlignment="Center"
+                   FontFamily="Consolas"/>
+    </Border>
+</UserControl>

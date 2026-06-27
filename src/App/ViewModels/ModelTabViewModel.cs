@@ -25,7 +25,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     public EffectsManager EffectsManager { get; } = new DefaultEffectsManager();
     public ObservableElement3DCollection PreviewModels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<MaterialChannel> Channels { get; } = new();
-    public System.Collections.ObjectModel.ObservableCollection<ChannelValue> ChannelValues { get; } = new();
+    public System.Collections.ObjectModel.ObservableCollection<ChannelEdit> ChannelValues { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<ChannelValue> UsedChannels { get; } = new();
     public System.Collections.ObjectModel.ObservableCollection<PermutationOption> Permutations { get; } = new();
 
@@ -109,7 +109,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
             Channels.Clear();
             foreach (var c in data.Channels) Channels.Add(c);
             ChannelValues.Clear();
-            foreach (var v in data.ChannelValues) ChannelValues.Add(v);
+            foreach (var v in data.ChannelValues) { v.Changed = OnChannelEdited; ChannelValues.Add(v); }
             UsedChannels.Clear();
             foreach (var v in data.UsedChannels) UsedChannels.Add(v);
             // Rebuild the permutation list only when the variant set changes (keeps the selection stable).
@@ -161,6 +161,7 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
 
     partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value, Exposure);
     partial void OnExposureChanged(double value) => Lights.Apply(Lighting, value);
+    private void OnChannelEdited() => ModelPreview.ApplyTint(PreviewModels, ChannelValues);
 
     partial void OnWireframeChanged(bool value)
     {

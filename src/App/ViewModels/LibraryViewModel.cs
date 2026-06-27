@@ -43,8 +43,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     /// <summary>Permutations/variants of the selected model (gear/skin colour sets); empty when none.</summary>
     public ObservableCollection<PermutationOption> Permutations { get; } = new();
 
-    /// <summary>Raw per-material channel values (pixel cbuffer Vec4s) — read-only inspection.</summary>
-    public ObservableCollection<ChannelValue> ChannelValues { get; } = new();
+    /// <summary>Editable per-material channel values (pixel cbuffer Vec4s); colour channels tint the albedo.</summary>
+    public ObservableCollection<ChannelEdit> ChannelValues { get; } = new();
 
     /// <summary>Object channels the model's shaders reference (named where the wordlist resolves them).</summary>
     public ObservableCollection<ChannelValue> UsedChannels { get; } = new();
@@ -114,6 +114,9 @@ public sealed partial class LibraryViewModel : TabItemViewModel
 
     partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value, Exposure);
     partial void OnExposureChanged(double value) => Lights.Apply(Lighting, value);
+
+    /// <summary>A channel value was dragged — re-apply the best-effort albedo tint to the live preview.</summary>
+    private void OnChannelEdited() => ModelPreview.ApplyTint(PreviewModels, ChannelValues);
 
     partial void OnTexturedChanged(bool value)
     {
@@ -247,7 +250,7 @@ public sealed partial class LibraryViewModel : TabItemViewModel
                 Channels.Clear();
                 foreach (var c in data.Channels) Channels.Add(c);
                 ChannelValues.Clear();
-                foreach (var v in data.ChannelValues) ChannelValues.Add(v);
+                foreach (var v in data.ChannelValues) { v.Changed = OnChannelEdited; ChannelValues.Add(v); }
                 UsedChannels.Clear();
                 foreach (var v in data.UsedChannels) UsedChannels.Add(v);
             }

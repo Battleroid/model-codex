@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:ModelCodex.App.ViewModels"
+             xmlns:v="clr-namespace:ModelCodex.App.Views"
              xmlns:hx="http://helix-toolkit.org/wpf/SharpDX"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -121,14 +122,19 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBlock Text="CHANNEL VALUES  (read-only)" Style="{StaticResource k}" Margin="0,10,0,4"
+                        <TextBlock Text="CHANNEL VALUES  (drag to scrub)" Style="{StaticResource k}" Margin="0,10,0,4"
                                    Visibility="{Binding ChannelValues.Count, Converter={StaticResource CountVis}}"/>
                         <ItemsControl ItemsSource="{Binding ChannelValues}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <DockPanel Margin="0,0,0,1">
-                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Index}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="34"/>
-                                        <TextBlock Text="{Binding Values}" Foreground="{StaticResource TextDim}" FontSize="9"/>
+                                    <DockPanel Margin="0,0,0,2" LastChildFill="False">
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Foreground="{StaticResource TextFaint}" FontSize="9" Width="28" VerticalAlignment="Center"/>
+                                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                            <v:ScrubBox Value="{Binding X, Mode=TwoWay}" Width="46" Margin="0,0,2,0"/>
+                                            <v:ScrubBox Value="{Binding Y, Mode=TwoWay}" Width="46" Margin="0,0,2,0"/>
+                                            <v:ScrubBox Value="{Binding Z, Mode=TwoWay}" Width="46" Margin="0,0,2,0"/>
+                                            <v:ScrubBox Value="{Binding W, Mode=TwoWay}" Width="46"/>
+                                        </StackPanel>
                                     </DockPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

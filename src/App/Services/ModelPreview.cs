@@ -16,12 +16,15 @@ public sealed record PreviewData(
     string Info,
     IReadOnlyList<int> Variants,
     int SelectedVariant,
-    List<ChannelValue> ChannelValues,
+    List<ChannelEdit> ChannelValues,
     List<ChannelValue> UsedChannels);
 
 /// <summary>Shared model preview pipeline: parse geometry, build per-part textured meshes + channels.</summary>
 public static class ModelPreview
 {
+    /// <summary>Max number of editable channel rows shown — see the comment at the population site.</summary>
+    public const int MaxEditableChannels = 8;
+
     public static PreviewData Load(PackageManager mgr, ModelEntry entry, bool textured, uint? overrideAlbedo = null,
         ModelDetail detail = ModelDetail.MostDetailed, int? variant = null, MaterialView view = MaterialView.Shaded,
         bool flat = false)
@@ -38,7 +41,7 @@ public static class ModelPreview
         var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo, view, flat);
 
         var channels = new List<MaterialChannel>();
-        var values = new List<ChannelValue>();
+        var values = new List<ChannelEdit>();
         var used = new List<ChannelValue>();
         var seenMat = new HashSet<uint>();
         var seenTex = new HashSet<uint>();
@@ -53,11 +56,19 @@ public static class ModelPreview
             foreach (uint h in MaterialMap.ObjectChannels(mgr, part.MaterialHash))
                 if (seenChan.Add(h)) used.Add(new ChannelValue(ChannelNames.Resolve(h), $"0x{h:X8}"));
             // Channel values from the first material only (avoids a huge mixed list).
+            // Cap the editable set: each row hosts 4 drag-scrub controls inside the D3DImage-backed
+            // window, and past ~12 realized rows the SharpDX viewport stops compositing correctly
+            // (renders abstract colour blobs). 8 stays safely under that and covers the meaningful
+            // (non-zero) channels for every entity seen so far.
             if (values.Count == 0)
             {
                 var cb = MaterialMap.ChannelValues(mgr, part.MaterialHash);
-                for (int i = 0; i < cb.Count; i++)
-                    values.Add(new ChannelValue($"[{i}]", $"{cb[i].x:0.###}, {cb[i].y:0.###}, {cb[i].z:0.###}, {cb[i].w:0.###}"));
+                for (int i = 0; i < cb.Count && values.Count < MaxEditableChannels; i++)
+                {
+                    var (x, y, z, w) = cb[i];
+                    if (x == 0 && y == 0 && z == 0 && w == 0) continue; // skip empty/unused channels
+                    values.Add(new ChannelEdit($"[{i}]", x, y, z, w));
+                }
             }
         }
 
@@ -118,6 +129,20 @@ public static class ModelPreview
     {
         coll.Clear();
         foreach (var mesh in ToModels(data, wireframe)) coll.Add(mesh);
+    }
+
+    /// <summary>Best-effort live channel feedback: multiply textured parts' albedo by the product of the
+    /// "tint" channels' current RGB (white-default colour channels). The real shader isn't run, so only
+    /// these colour channels visibly affect the model — dragging a scalar channel does nothing here.</summary>
+    public static void ApplyTint(ObservableElement3DCollection coll, IEnumerable<ChannelEdit> channels)
+    {
+        float r = 1, g = 1, b = 1;
+        foreach (var c in channels)
+            if (c.IsTint) { r *= (float)c.X; g *= (float)c.Y; b *= (float)c.Z; }
+        var tint = new Color4(Math.Clamp(r, 0, 2), Math.Clamp(g, 0, 2), Math.Clamp(b, 0, 2), 1f);
+        foreach (var e in coll)
+            if (e is MeshGeometryModel3D { Material: PhongMaterial pm } && pm.DiffuseMap != null)
+                pm.DiffuseColor = tint;
     }
 
     /// <summary>Frame a camera on the model's bounds (Z-up, iso-ish vantage).</summary>
