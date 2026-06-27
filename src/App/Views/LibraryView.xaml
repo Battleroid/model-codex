@@ -148,6 +148,8 @@
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top">
                         <CheckBox Content="Textured" IsChecked="{Binding Textured}" Foreground="{StaticResource TextDim}"
                                   FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,4"/>
+                        <CheckBox Content="Flat shading" IsChecked="{Binding FlatShading}" Foreground="{StaticResource TextDim}"
+                                  FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,4"/>
                         <ComboBox Width="120" ItemsSource="{Binding LightingStyles}" DisplayMemberPath="Name"
                                   SelectedValuePath="Style" SelectedValue="{Binding Lighting}" FontSize="11" Margin="0,0,0,4"/>
                         <ComboBox Width="120" ItemsSource="{Binding MaterialViews}" DisplayMemberPath="Name"

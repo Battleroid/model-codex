@@ -79,11 +79,11 @@ public static class Lighting
             C(0, 0, 0), V(0, 0, 1),
             C(0, 0, 0), V(0, 0, 1)),
 
-        _ => new LightRig( // Lookdev — readable but not washed out (preserves albedo colour)
-            C(92, 94, 102),
-            C(150, 150, 156), V(-0.45, -0.55, -0.70),
-            C(96, 98, 110), V(0.55, 0.45, -0.25),
-            C(74, 76, 86), V(0.10, -0.30, 0.80)),
+        _ => new LightRig( // Lookdev — neutral key + soft fill/rim, low flat ambient so colour stays saturated
+            C(78, 80, 88),
+            C(158, 158, 162), V(-0.45, -0.55, -0.70),
+            C(74, 76, 86), V(0.55, 0.45, -0.25),
+            C(46, 48, 56), V(0.10, -0.30, 0.80)),
     };
 
     private static Color C(byte r, byte g, byte b) => Color.FromRgb(r, g, b);

@@ -27,6 +27,7 @@
                     <CheckBox Content="Isometric" IsChecked="{Binding Isometric}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
                     <CheckBox Content="Textured" IsChecked="{Binding Textured}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
                     <CheckBox Content="Wireframe" IsChecked="{Binding Wireframe}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                    <CheckBox Content="Flat" IsChecked="{Binding FlatShading}" Foreground="{StaticResource TextDim}" Margin="0,0,14,0" VerticalAlignment="Center"/>
                     <CheckBox Content="Grid" IsChecked="{Binding ShowGrid}" Foreground="{StaticResource TextDim}" Margin="0,0,18,0" VerticalAlignment="Center"/>
                     <TextBlock Text="LIGHT" Style="{StaticResource k}" VerticalAlignment="Center" Margin="0,0,6,0"/>
                     <ComboBox Width="100" ItemsSource="{Binding LightingStyles}" DisplayMemberPath="Name"

@@ -44,7 +44,7 @@ public static class ModelSceneBuilder
     /// <summary>One mesh per part, each with its resolved albedo texture (PNG) when <paramref name="textured"/>.
     /// If <paramref name="overrideAlbedo"/> is set, that texture is used for every part (channel preview).</summary>
     public static List<PartRender> BuildParts(TModel geom, PackageManager mgr, bool textured,
-        uint? overrideAlbedo = null, MaterialView view = MaterialView.Shaded)
+        uint? overrideAlbedo = null, MaterialView view = MaterialView.Shaded, bool flat = false)
     {
         var result = new List<PartRender>();
         var texCache = new Dictionary<uint, byte[]?>();
@@ -92,7 +92,7 @@ public static class ModelSceneBuilder
 
             result.Add(new PartRender
             {
-                Geometry = Finish(positions, indices, normals, texcoords),
+                Geometry = Finish(positions, indices, normals, texcoords, flat),
                 AlbedoDds = albedo,
                 EmissiveDds = emissive,
                 Unlit = unlit,
@@ -269,16 +269,36 @@ public static class ModelSceneBuilder
     }
 
     private static MeshGeometry3D Finish(Vector3Collection pos, IntCollection idx,
-        Vector3Collection nrm, Vector2Collection uv)
+        Vector3Collection nrm, Vector2Collection uv, bool flat = false)
     {
+        // Flat shading: un-weld every triangle so each face carries its own constant normal (faceted look).
+        if (flat)
+        {
+            var fp = new Vector3Collection(idx.Count);
+            var fuv = new Vector2Collection(idx.Count);
+            var fn = new Vector3Collection(idx.Count);
+            var fi = new IntCollection(idx.Count);
+            for (int i = 0; i + 2 < idx.Count; i += 3)
+            {
+                int a = idx[i], b = idx[i + 1], c = idx[i + 2];
+                var n = Vector3.Cross(pos[b] - pos[a], pos[c] - pos[a]);
+                n = n.LengthSquared() > 1e-12f ? Vector3.Normalize(n) : new Vector3(0, 0, 1);
+                foreach (int v in stackalloc[] { a, b, c })
+                {
+                    fp.Add(pos[v]); fuv.Add(v < uv.Count ? uv[v] : default); fn.Add(n); fi.Add(fi.Count);
+                }
+            }
+            return new MeshGeometry3D { Positions = fp, Indices = fi, TextureCoordinates = fuv, Normals = fn };
+        }
+
         // Decoded Tiger normals are quaternion-packed and unreliable; compute smooth normals explicitly
         // (HelixToolkit's CalculateNormals proved unreliable here — flat/dark shading).
         var acc = new Vector3[pos.Count];
         for (int i = 0; i + 2 < idx.Count; i += 3)
         {
             int a = idx[i], b = idx[i + 1], c = idx[i + 2];
-            var fn = Vector3.Cross(pos[b] - pos[a], pos[c] - pos[a]);
-            acc[a] += fn; acc[b] += fn; acc[c] += fn;
+            var fnrm = Vector3.Cross(pos[b] - pos[a], pos[c] - pos[a]);
+            acc[a] += fnrm; acc[b] += fnrm; acc[c] += fnrm;
         }
         var normals = new Vector3Collection(pos.Count);
         for (int i = 0; i < acc.Length; i++)

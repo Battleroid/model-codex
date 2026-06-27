@@ -36,7 +36,8 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
     [ObservableProperty] private MaterialView _materialView = MaterialView.Shaded;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
-    [ObservableProperty] private MColor _previewBg = MColor.FromRgb(0x10, 0x10, 0x14);
+    [ObservableProperty] private MColor _previewBg = BgColors.Parse(AppState.Instance.Config.PreviewBg);
+    [ObservableProperty] private bool _flatShading = AppState.Instance.Config.FlatShading;
 
     public LightingState Lights { get; } = new();
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
@@ -95,9 +96,10 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
         var detail = Detail;
         int? variant = _variant;
         var matView = MaterialView;
+        bool flat = FlatShading;
         try
         {
-            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail, variant, matView));
+            var data = await Task.Run(() => ModelPreview.Load(mgr, Entry, textured, null, detail, variant, matView, flat));
             _geom = data.Geometry;
             _lastData = data;
             ModelPreview.Populate(PreviewModels, data, Wireframe);
@@ -147,6 +149,8 @@ public sealed partial class ModelTabViewModel : TabItemViewModel
     partial void OnTexturedChanged(bool value) => _ = LoadAsync();
     partial void OnDetailChanged(ModelDetail value) => _ = LoadAsync();
     partial void OnMaterialViewChanged(MaterialView value) => _ = LoadAsync();
+    partial void OnFlatShadingChanged(bool value) { AppState.Instance.SetFlatShading(value); _ = LoadAsync(); }
+    partial void OnPreviewBgChanged(MColor value) => AppState.Instance.SetPreviewBg(BgColors.ToHex(value));
 
     partial void OnLightingChanged(LightingStyle value) => Lights.Apply(value);
 

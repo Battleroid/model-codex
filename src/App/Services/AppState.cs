@@ -83,6 +83,7 @@ public sealed class AppState
                 root["Lookdev"] = Config.Lookdev;
                 root["IsometricByDefault"] = Config.IsometricByDefault;
                 root["PreviewBg"] = Config.PreviewBg;
+                root["FlatShading"] = Config.FlatShading;
                 File.WriteAllText(_configPath, root.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
             }
             catch { }
@@ -96,6 +97,7 @@ public sealed class AppState
     public void SetLookdev(string v) { Config.Lookdev = v; Save(); }
     public void SetIsometricByDefault(bool v) { Config.IsometricByDefault = v; Save(); }
     public void SetPreviewBg(string v) { Config.PreviewBg = v; Save(); }
+    public void SetFlatShading(bool v) { Config.FlatShading = v; Save(); }
 
     /// <summary>Build the package/model index (call off the UI thread).</summary>
     public PackageManager BuildIndex(Action<double, string>? progress = null)

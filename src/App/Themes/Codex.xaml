@@ -77,23 +77,26 @@
         </Setter>
     </Style>
     <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="#FFC7C6C3"/>
+        <Setter Property="Background" Value="#FFC8F000"/>
         <Setter Property="Foreground" Value="#FF0C0C0D"/>
         <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="b" Background="{TemplateBinding Background}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                        <ContentPresenter x:Name="cp" HorizontalAlignment="Center" VerticalAlignment="Center"
                                           Margin="{TemplateBinding Padding}"
                                           TextElement.Foreground="{TemplateBinding Foreground}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="b" Property="Background" Value="#FFE9E8E5"/>
+                            <Setter TargetName="b" Property="Background" Value="#FFD8FF3A"/>
                         </Trigger>
+                        <!-- Disabled: dim grey chip with still-legible text (no opacity wash that hides the label). -->
                         <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.4"/>
+                            <Setter TargetName="b" Property="Background" Value="#FF3A3A3C"/>
+                            <Setter TargetName="cp" Property="TextElement.Foreground" Value="#FF9A9A9C"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

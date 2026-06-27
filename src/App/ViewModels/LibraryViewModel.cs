@@ -53,7 +53,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private LightingStyle _lighting = LightingStyle.Lookdev;
     [ObservableProperty] private MaterialView _materialView = MaterialView.Shaded;
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
-    [ObservableProperty] private MColor _previewBg = MColor.FromRgb(0x10, 0x10, 0x14);
+    [ObservableProperty] private MColor _previewBg = BgColors.Parse(AppState.Instance.Config.PreviewBg);
+    [ObservableProperty] private bool _flatShading = AppState.Instance.Config.FlatShading;
 
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
     public static IReadOnlyList<MaterialViewOption> MaterialViews { get; } = new[]
@@ -100,6 +101,14 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     {
         if (SelectedTile != null) _ = PreviewAsync(SelectedTile.Entry);
     }
+
+    partial void OnFlatShadingChanged(bool value)
+    {
+        AppState.Instance.SetFlatShading(value);
+        if (SelectedTile != null) _ = PreviewAsync(SelectedTile.Entry);
+    }
+
+    partial void OnPreviewBgChanged(MColor value) => AppState.Instance.SetPreviewBg(BgColors.ToHex(value));
 
     /// <summary>Models currently shown in the grid (the selected package), for bulk export.</summary>
     public IReadOnlyList<ModelEntry> CurrentPackageModels => VisibleModels.Select(v => v.Entry).ToList();
@@ -181,7 +190,8 @@ public sealed partial class LibraryViewModel : TabItemViewModel
             var detail = Detail;
             int? variant = _variant;
             var matView = MaterialView;
-            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail, variant, matView));
+            bool flat = FlatShading;
+            var data = await Task.Run(() => ModelPreview.Load(mgr, entry, textured, over, detail, variant, matView, flat));
             if (token != _previewToken) return; // a newer selection won
 
             if (data.Geometry is { } g)

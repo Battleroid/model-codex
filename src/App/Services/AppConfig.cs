@@ -15,6 +15,8 @@ public sealed class AppConfig
     public string Lookdev { get; set; } = "lookdev";
     /// <summary>Open model tabs in isometric projection by default (else perspective).</summary>
     public bool IsometricByDefault { get; set; } = false;
-    /// <summary>Preview backdrop: "lookdev" (sky) or a "#RRGGBB" solid colour.</summary>
-    public string PreviewBg { get; set; } = "lookdev";
+    /// <summary>Preview backdrop colour as "#RRGGBB", persisted across sessions.</summary>
+    public string PreviewBg { get; set; } = "#101014";
+    /// <summary>Smooth (averaged) vs flat (faceted) shading in previews.</summary>
+    public bool FlatShading { get; set; } = false;
 }

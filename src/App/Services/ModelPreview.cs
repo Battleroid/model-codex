@@ -21,7 +21,8 @@ public sealed record PreviewData(
 public static class ModelPreview
 {
     public static PreviewData Load(PackageManager mgr, ModelEntry entry, bool textured, uint? overrideAlbedo = null,
-        ModelDetail detail = ModelDetail.MostDetailed, int? variant = null, MaterialView view = MaterialView.Shaded)
+        ModelDetail detail = ModelDetail.MostDetailed, int? variant = null, MaterialView view = MaterialView.Shaded,
+        bool flat = false)
     {
         var full = ModelParse.Parse(mgr, entry, detail);
         if (full == null || full.VertexCount == 0)
@@ -32,7 +33,7 @@ public static class ModelPreview
         int sel = variant ?? full.DefaultVariant;
         var g = full.WithVariant(sel);
 
-        var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo, view);
+        var parts = ModelSceneBuilder.BuildParts(g, mgr, textured, overrideAlbedo, view, flat);
 
         var channels = new List<MaterialChannel>();
         var seenMat = new HashSet<uint>();
@@ -63,10 +64,12 @@ public static class ModelPreview
         // Lit material. AmbientColor lets ambient light contribute; tiny emissive avoids pure-black faces.
         var mat = new PhongMaterial
         {
-            AmbientColor = new Color4(0.85f, 0.85f, 0.88f, 1f), // pairs with the softer ambient light; keeps albedo true
-            EmissiveColor = new Color4(0.02f, 0.02f, 0.03f, 1f),
-            SpecularColor = new Color4(0.08f, 0.08f, 0.09f, 1f),
-            SpecularShininess = 12f,
+            // Low flat ambient so the albedo stays saturated (high ambient washed colours out); the rig's
+            // ambient light fills shadows. Tiny emissive avoids pure-black faces; gentle spec.
+            AmbientColor = new Color4(0.45f, 0.45f, 0.48f, 1f),
+            EmissiveColor = new Color4(0.015f, 0.015f, 0.02f, 1f),
+            SpecularColor = new Color4(0.06f, 0.06f, 0.07f, 1f),
+            SpecularShininess = 14f,
         };
         if (albedoDds != null) { mat.DiffuseColor = Color.White; mat.DiffuseMap = new TextureModel(new MemoryStream(albedoDds), true); }
         else mat.DiffuseColor = new Color4(0.78f, 0.79f, 0.82f, 1f);
