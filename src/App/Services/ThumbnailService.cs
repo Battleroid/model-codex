@@ -23,8 +23,22 @@ public static class ThumbnailService
     /// <summary>tag -> has no decodable geometry (populated as thumbnails/scans parse).</summary>
     public static readonly ConcurrentDictionary<uint, bool> EmptyCache = new();
 
-    private static readonly (byte, byte, byte) Bg = (28, 30, 36);
-    private static readonly (byte, byte, byte) Face = (170, 174, 182);
+    // Grid render settings (set from the library toolbar; changing any clears the rendered cache).
+    private static (byte, byte, byte) Bg = (28, 30, 36);
+    private static (byte, byte, byte) Face = (170, 174, 182);
+    private static GridTex View = GridTex.Textured;
+
+    public static void SetBg(System.Windows.Media.Color c) => Bg = (c.R, c.G, c.B);
+    public static void SetLighting(LightingStyle s) => Face = s switch
+    {
+        LightingStyle.Flat => (208, 208, 212),
+        LightingStyle.Studio => (192, 193, 198),
+        LightingStyle.Sun => (200, 196, 182),
+        _ => (170, 174, 182), // Lookdev
+    };
+    public static void SetView(GridTex v) => View = v;
+    /// <summary>Drop rendered thumbnails (call after a settings change) so tiles re-render with new settings.</summary>
+    public static void ClearRendered() => ThumbCache.Clear();
 
     public static void Request(ModelTile tile)
     {
@@ -75,11 +89,15 @@ public static class ThumbnailService
     private static IReadOnlyList<TexSample?> ResolvePartTextures(PackageManager mgr, ModelGeometry geom)
     {
         var list = new List<TexSample?>(geom.Parts.Count);
+        if (View == GridTex.Untextured) { foreach (var _ in geom.Parts) list.Add(null); return list; }
         TexSample? primary = null;
         foreach (var part in geom.Parts)
         {
             TexSample? sample = null;
-            if (part.MaterialHash != 0 && MaterialMap.Albedo(mgr, part.MaterialHash) is uint th)
+            uint? texHash = View == GridTex.Normal
+                ? (part.MaterialHash != 0 ? MaterialMap.Normal(mgr, part.MaterialHash) : null)
+                : (part.MaterialHash != 0 ? MaterialMap.Albedo(mgr, part.MaterialHash) : null);
+            if (texHash is uint th)
             {
                 if (!TexCache.TryGetValue(th, out sample))
                 {

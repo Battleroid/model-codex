@@ -10,6 +10,10 @@ public enum LightingStyle { Lookdev, Studio, Sun, Flat }
 /// flat/unlit (Deimos-style lookdev channels). Metalness/Emission/Transmission are the gstack R/G/B.</summary>
 public enum MaterialView { Shaded, Albedo, Normal, Metalness, Emission, Transmission }
 
+/// <summary>Texture shown on grid thumbnails.</summary>
+public enum GridTex { Textured, Normal, Untextured }
+public sealed record GridTexOption(GridTex Mode, string Name) { public override string ToString() => Name; }
+
 /// <summary>Combo options. ToString returns Name so the closed ComboBox display shows it reliably.</summary>
 public sealed record LightingOption(LightingStyle Style, string Name) { public override string ToString() => Name; }
 public sealed record DetailOption(Tiger.Model.ModelDetail Detail, string Name) { public override string ToString() => Name; }

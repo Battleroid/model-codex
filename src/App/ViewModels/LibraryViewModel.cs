@@ -55,6 +55,26 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     [ObservableProperty] private ModelDetail _detail = ModelDetail.MostDetailed;
     [ObservableProperty] private MColor _previewBg = BgColors.Parse(AppState.Instance.Config.PreviewBg);
     [ObservableProperty] private bool _flatShading = AppState.Instance.Config.FlatShading;
+    [ObservableProperty] private LightingStyle _gridLighting = LightingStyle.Lookdev;
+    [ObservableProperty] private GridTex _gridTexture = GridTex.Textured;
+    [ObservableProperty] private bool _gridBusy;
+
+    public static IReadOnlyList<GridTexOption> GridTextures { get; } = new[]
+    {
+        new GridTexOption(GridTex.Textured, "Textured"),
+        new GridTexOption(GridTex.Normal, "Normal"),
+        new GridTexOption(GridTex.Untextured, "Untextured"),
+    };
+
+    partial void OnGridLightingChanged(LightingStyle value) { ThumbnailService.SetLighting(value); ReRenderGrid(); }
+    partial void OnGridTextureChanged(GridTex value) { ThumbnailService.SetView(value); ReRenderGrid(); }
+
+    /// <summary>Drop rendered thumbnails and re-request them for the visible tiles (after a grid setting change).</summary>
+    private void ReRenderGrid()
+    {
+        ThumbnailService.ClearRendered();
+        foreach (var t in VisibleModels) { t.LoadRequested = false; ThumbnailService.Request(t); }
+    }
 
     public static IReadOnlyList<LightingOption> LightingStyles => Services.Lighting.Styles;
     public static IReadOnlyList<MaterialViewOption> MaterialViews { get; } = new[]
@@ -108,7 +128,12 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         if (SelectedTile != null) _ = PreviewAsync(SelectedTile.Entry);
     }
 
-    partial void OnPreviewBgChanged(MColor value) => AppState.Instance.SetPreviewBg(BgColors.ToHex(value));
+    partial void OnPreviewBgChanged(MColor value)
+    {
+        AppState.Instance.SetPreviewBg(BgColors.ToHex(value));
+        ThumbnailService.SetBg(value);
+        ReRenderGrid();
+    }
 
     /// <summary>Models currently shown in the grid (the selected package), for bulk export.</summary>
     public IReadOnlyList<ModelEntry> CurrentPackageModels => VisibleModels.Select(v => v.Entry).ToList();
@@ -131,7 +156,13 @@ public sealed partial class LibraryViewModel : TabItemViewModel
     private List<ModelEntry> _all = new();
     private int _previewToken;
 
-    public LibraryViewModel() { Title = "Library"; }
+    public LibraryViewModel()
+    {
+        Title = "Library";
+        ThumbnailService.SetBg(PreviewBg);
+        ThumbnailService.SetLighting(GridLighting);
+        ThumbnailService.SetView(GridTexture);
+    }
 
     public void SetManager(PackageManager mgr)
     {
@@ -256,18 +287,23 @@ public sealed partial class LibraryViewModel : TabItemViewModel
         var todo = _all.Where(m => m.PkgId == pkgId && !ThumbnailService.EmptyCache.ContainsKey(m.TagHash)).ToList();
         if (todo.Count == 0) return;
         var ui = System.Windows.Threading.Dispatcher.CurrentDispatcher;
-        await Task.Run(() =>
+        GridBusy = true;
+        try
         {
-            int done = 0;
-            Parallel.ForEach(todo, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, m =>
+            await Task.Run(() =>
             {
-                bool empty;
-                try { var g = ModelParse.Parse(mgr, m); empty = g == null || g.VertexCount == 0; } catch { empty = true; }
-                ThumbnailService.EmptyCache[m.TagHash] = empty;
-                if (System.Threading.Interlocked.Increment(ref done) % 96 == 0)
-                    ui.InvokeAsync(DropKnownEmpties, System.Windows.Threading.DispatcherPriority.Background);
+                int done = 0;
+                Parallel.ForEach(todo, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount / 2) }, m =>
+                {
+                    bool empty;
+                    try { var g = ModelParse.Parse(mgr, m); empty = g == null || g.VertexCount == 0; } catch { empty = true; }
+                    ThumbnailService.EmptyCache[m.TagHash] = empty;
+                    if (System.Threading.Interlocked.Increment(ref done) % 96 == 0)
+                        ui.InvokeAsync(DropKnownEmpties, System.Windows.Threading.DispatcherPriority.Background);
+                });
             });
-        });
+        }
+        finally { GridBusy = false; }
         DropKnownEmpties();
     }
 
