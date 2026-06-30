@@ -19,9 +19,7 @@ an interactive 3D viewport and **export to glTF / OBJ / FBX / STL** — for Blen
 
 ## Preview
 
-<video src="https://github.com/Battleroid/model-codex/raw/master/model_codex_preview.mp4" controls muted loop width="100%"></video>
-
-> If the video doesn't play inline, [watch the preview demo](https://github.com/Battleroid/model-codex/raw/master/model_codex_preview.mp4).
+![Model Codex preview](model_codex_preview.mp4)
 
 ## Features
 
