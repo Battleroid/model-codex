@@ -19,7 +19,9 @@ an interactive 3D viewport and **export to glTF / OBJ / FBX / STL** — for Blen
 
 ## Preview
 
-![Model Codex preview](model_codex_preview.mp4)
+[![Model Codex demo](model_codex_preview.png)](model_codex_preview.mp4)
+
+_Click the image to play the preview demo._
 
 ## Features
 
