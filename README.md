@@ -17,6 +17,12 @@ an interactive 3D viewport and **export to glTF / OBJ / FBX / STL** — for Blen
 > `Probe` harness and validated against retail data and external tools. No code from Deimos / MIDA / Charm
 > is vendored or copied — they were used only as documentation of the file format.
 
+## Preview
+
+<video src="https://github.com/Battleroid/model-codex/raw/master/model_codex_preview.mp4" controls muted loop width="100%"></video>
+
+> If the video doesn't play inline, [watch the preview demo](https://github.com/Battleroid/model-codex/raw/master/model_codex_preview.mp4).
+
 ## Features
 
 - **Browse the static‑model catalogue** (~54,000 models) by package (`outpost`, `marathon_deck_001`,
